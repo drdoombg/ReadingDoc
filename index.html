@@ -262,12 +262,6 @@
     }
 
     .player-row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .player-row3 { display: none; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
-    .pm-link {
-      background: none; border: none; padding: 0; font-family: inherit; font-size: 11px;
-      color: var(--accent-lt); text-decoration: underline; cursor: pointer;
-    }
-    .pm-link:hover { color: var(--light); }
 
     /* speed chips */
     .speed-chips { display: flex; gap: 5px; flex-wrap: wrap; }
@@ -344,7 +338,7 @@
 </div>
 
 <div id="file-protocol-bar">
-  <span style="flex:1"><strong>Neural (Piper) voice is unavailable here.</strong> You opened this file directly (file://) — the browser storage Piper needs only works when the page is served over http/https. Double-click <strong>Start ReadingDoc.bat</strong> in this folder instead, or use a Browser voice below.</span>
+  <span style="flex:1"><strong>Neural (Kokoro) voice is unavailable here.</strong> You opened this file directly (file://) — the browser storage the neural voice needs only works when the page is served over http/https. Double-click <strong>Start ReadingDoc.bat</strong> in this folder instead, or use a Browser voice below.</span>
   <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">×</button>
 </div>
 
@@ -353,7 +347,7 @@
     <img src="icons/icon-128.png" alt="Reading Doc"/>
   </div>
   <span class="hdr-name">Reading Doc</span>
-  <span class="hdr-version">V0.4</span>
+  <span class="hdr-version">V0.5</span>
   <div class="hdr-right">
     <span class="kbd-hint"><kbd>Space</kbd> pause · <kbd>Esc</kbd> stop</span>
   </div>
@@ -474,11 +468,6 @@
       </button>
     </div>
   </div>
-  <div class="player-row3" id="piper-model-row">
-    <span id="piper-model-status"></span>
-    <button class="pm-link" id="btn-piper-upload" type="button">Add model files manually</button>
-    <input type="file" id="piper-file-input" accept=".onnx,.json" multiple style="display:none"/>
-  </div>
 </div>
 
 <footer>Reading Doc · browser TTS · private · no uploads</footer>
@@ -492,8 +481,8 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// Piper's storage (OPFS) doesn't reliably work under file://, only http(s) —
-// warn up front instead of letting downloads/uploads silently fail later.
+// The neural voice's browser storage doesn't reliably work under file://,
+// only http(s) — warn up front instead of letting it silently fail later.
 const isFileProtocol = location.protocol === 'file:';
 if (isFileProtocol) document.getElementById('file-protocol-bar').style.display = 'flex';
 
@@ -522,10 +511,6 @@ const pWord       = document.getElementById('p-word');
 const pFill       = document.getElementById('p-fill');
 const fileInput   = document.getElementById('file-input');
 const speedChips  = document.querySelectorAll('.sc');
-const piperModelRow    = document.getElementById('piper-model-row');
-const piperModelStatus = document.getElementById('piper-model-status');
-const btnPiperUpload   = document.getElementById('btn-piper-upload');
-const piperFileInput   = document.getElementById('piper-file-input');
 
 // ── State ──────────────────────────────────────────────────────
 const synth = window.speechSynthesis;
@@ -543,12 +528,13 @@ let chunkIndex = 0;
 let totalTextLength = 0;
 let speakTimeout = null;
 
-// Piper (offline neural TTS) state
-let piperMod = null;
-let piperAudio = null;
-let piperChunks = [];
-let piperChunkIndex = 0;
-let piperTotalLen = 0;
+// Kokoro (offline neural TTS) state
+let kokoroMod = null;
+let kokoroTTS = null;
+let kokoroAudio = null;
+let kokoroChunks = [];
+let kokoroChunkIndex = 0;
+let kokoroTotalLen = 0;
 let activeEngine = 'system';
 
 let library = [];
@@ -566,22 +552,37 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 
 // ── Voices ─────────────────────────────────────────────────────
-const PIPER_VOICE_ID = 'piper:en_US-lessac-high';
+const KOKORO_MODEL_ID = 'onnx-community/Kokoro-82M-ONNX';
+const KOKORO_VOICE_PREFIX = 'kokoro:';
+const KOKORO_VOICES = [
+  { id: 'af_bella',    label: 'Bella — US Female' },
+  { id: 'af_nicole',   label: 'Nicole — US Female' },
+  { id: 'af_sarah',    label: 'Sarah — US Female' },
+  { id: 'af_sky',      label: 'Sky — US Female' },
+  { id: 'am_adam',     label: 'Adam — US Male' },
+  { id: 'am_michael',  label: 'Michael — US Male' },
+  { id: 'bf_emma',     label: 'Emma — UK Female' },
+  { id: 'bf_isabella', label: 'Isabella — UK Female' },
+  { id: 'bm_george',   label: 'George — UK Male' },
+  { id: 'bm_lewis',    label: 'Lewis — UK Male' },
+];
 const VOICE_PREF_KEY = 'rd-voice';
 
-function addPiperGroup() {
+function addKokoroGroup() {
   const g = document.createElement('optgroup'); g.label = 'Neural (offline, downloads once)';
-  const o = document.createElement('option');
-  o.value = PIPER_VOICE_ID;
-  o.textContent = 'Lessac — High ◆◆' + (isFileProtocol ? ' (needs http server)' : '');
-  o.disabled = isFileProtocol;
-  g.appendChild(o);
+  KOKORO_VOICES.forEach(v => {
+    const o = document.createElement('option');
+    o.value = KOKORO_VOICE_PREFIX + v.id;
+    o.textContent = v.label + ' ◆◆' + (isFileProtocol ? ' (needs http server)' : '');
+    o.disabled = isFileProtocol;
+    g.appendChild(o);
+  });
   voiceSel.appendChild(g);
 }
 
 function restoreVoicePreference() {
   const saved = localStorage.getItem(VOICE_PREF_KEY);
-  if (isFileProtocol && saved && saved.startsWith('piper:')) return; // can't work under file://, keep the auto-picked browser voice
+  if (isFileProtocol && saved && saved.startsWith(KOKORO_VOICE_PREFIX)) return; // can't work under file://, keep the auto-picked browser voice
   if (saved && [...voiceSel.options].some(o => o.value === saved)) voiceSel.value = saved;
 }
 
@@ -610,23 +611,20 @@ function loadVoices() {
   addGrp('Neural / Online ◆', neural);
   addGrp('English', enRest);
   addGrp('Other', other);
-  addPiperGroup();
+  addKokoroGroup();
 
   if (prevValue && [...voiceSel.options].some(o => o.value === prevValue)) voiceSel.value = prevValue;
   else restoreVoicePreference();
 
   updatePlayBtn();
-  refreshPiperModelStatus();
 }
 
 voiceSel.innerHTML = '';
-addPiperGroup();
+addKokoroGroup();
 restoreVoicePreference();
-refreshPiperModelStatus();
 voiceSel.addEventListener('change', () => {
   localStorage.setItem(VOICE_PREF_KEY, voiceSel.value);
   updatePlayBtn();
-  refreshPiperModelStatus();
 });
 
 if (synth) {
@@ -645,14 +643,14 @@ function getVoice() {
 }
 
 function currentEngine() {
-  return voiceSel.value.startsWith('piper:') ? 'piper' : 'system';
+  return voiceSel.value.startsWith(KOKORO_VOICE_PREFIX) ? 'kokoro' : 'system';
 }
 
 speedChips.forEach(chip => {
   chip.addEventListener('click', () => {
     currentSpeed = parseFloat(chip.dataset.s);
     speedChips.forEach(c => c.classList.toggle('active', c === chip));
-    if (piperAudio) piperAudio.playbackRate = currentSpeed;
+    if (kokoroAudio) kokoroAudio.playbackRate = currentSpeed;
   });
 });
 
@@ -683,7 +681,7 @@ function canPlay() {
                 : currentMode === 'doc'   ? !!activeDocId
                 : false;
   if (!hasText) return false;
-  return currentEngine() === 'piper' ? true : voices.length > 0;
+  return currentEngine() === 'kokoro' ? true : voices.length > 0;
 }
 
 function updatePlayBtn() {
@@ -694,19 +692,19 @@ function updatePlayBtn() {
 
 // ── Safe Chunking Engine ───────────────────────────────────────
 function stopAll() {
-  const wasActive = synth.speaking || synth.pending || (piperAudio && !piperAudio.paused);
+  const wasActive = synth.speaking || synth.pending || (kokoroAudio && !kokoroAudio.paused);
   if (synth.speaking || synth.pending) synth.cancel();
-  if (piperAudio) {
-    piperAudio.onended = null; piperAudio.onerror = null; piperAudio.onplay = null;
-    piperAudio.pause();
-    piperAudio = null;
+  if (kokoroAudio) {
+    kokoroAudio.onended = null; kokoroAudio.onerror = null; kokoroAudio.onplay = null;
+    kokoroAudio.pause();
+    kokoroAudio = null;
   }
 
   isPlaying = false;
   isPaused = false;
   speechChunks = [];
-  piperChunks = [];
-  piperChunkIndex = 0;
+  kokoroChunks = [];
+  kokoroChunkIndex = 0;
   setStatus('ready');
   docFrame.querySelectorAll('.su-hl').forEach(n => n.classList.remove('su-hl'));
   return wasActive;
@@ -808,207 +806,108 @@ function playNextChunk() {
   synth.speak(utterance);
 }
 
-// ── Piper (offline neural voice) ───────────────────────────────
-async function getPiperModule() {
-  if (!piperMod) piperMod = await import('https://cdn.jsdelivr.net/npm/@diffusionstudio/vits-web/+esm');
-  return piperMod;
+// ── Kokoro (offline neural voice) ──────────────────────────────
+async function getKokoroModule() {
+  if (!kokoroMod) kokoroMod = await import('https://cdn.jsdelivr.net/npm/kokoro-js/+esm');
+  return kokoroMod;
 }
 
-async function ensurePiperVoiceReady(mod, voiceId) {
-  const stored = await mod.stored();
-  if (stored.includes(voiceId)) return;
+function kokoroDevice() {
+  return navigator.gpu ? 'webgpu' : 'wasm';
+}
+
+async function ensureKokoroReady(mod) {
+  if (kokoroTTS) return kokoroTTS;
   pDot.className = 'p-dot loading';
   pLabel.className = 'loading';
-  pLabel.textContent = 'Downloading neural voice (first time only, ~60-90s)…';
+  pLabel.textContent = 'Downloading neural voice (first time only, ~80MB)…';
   pFill.className = 'indeterminate';
-  await mod.download(voiceId, progress => {
-    if (progress.total) {
-      const pct = Math.round(progress.loaded * 100 / progress.total);
-      pFill.className = '';
-      pFill.style.width = pct + '%';
-      pLabel.textContent = `Downloading neural voice… ${pct}%`;
-    } else {
-      pLabel.textContent = `Downloading neural voice… ${(progress.loaded / 1e6).toFixed(1)} MB`;
+  const device = kokoroDevice();
+  kokoroTTS = await mod.KokoroTTS.from_pretrained(KOKORO_MODEL_ID, {
+    dtype: device === 'webgpu' ? 'fp32' : 'q8',
+    device,
+    progress_callback: progress => {
+      if (progress.status !== 'progress') return;
+      if (progress.total) {
+        const pct = Math.round(progress.loaded * 100 / progress.total);
+        pFill.className = '';
+        pFill.style.width = pct + '%';
+        pLabel.textContent = `Downloading neural voice… ${pct}%`;
+      } else if (typeof progress.progress === 'number') {
+        pLabel.textContent = `Downloading neural voice… ${Math.round(progress.progress)}%`;
+      }
     }
   });
   pFill.className = '';
   pFill.style.width = '100%';
+  return kokoroTTS;
 }
 
-// ── Manual voice model upload ──────────────────────────────────
-// vits-web stores each voice as two flat files in the OPFS "piper" dir:
-// <voiceId>.onnx and <voiceId>.onnx.json. Writing them there ourselves,
-// with the same names, makes the library treat the voice as already
-// downloaded — lets the (large, sometimes unreliable in-page fetch)
-// CDN download be replaced by a normal resumable browser download +
-// manual pick, without touching vits-web's own APIs.
-function currentPiperVoiceId() {
-  return voiceSel.value.startsWith('piper:') ? voiceSel.value.slice('piper:'.length) : null;
-}
-
-async function piperFilesPresent(voiceId) {
-  try {
-    const root = await navigator.storage.getDirectory();
-    const dir = await root.getDirectoryHandle('piper');
-    const names = [];
-    for await (const name of dir.keys()) names.push(name);
-    return names.includes(voiceId + '.onnx') && names.includes(voiceId + '.onnx.json');
-  } catch (e) {
-    return false;
-  }
-}
-
-async function writePiperFile(filename, file, onProgress) {
-  const root = await navigator.storage.getDirectory();
-  const dir = await root.getDirectoryHandle('piper', { create: true });
-  const handle = await dir.getFileHandle(filename, { create: true });
-  const writable = await handle.createWritable();
-  // Stream in chunks (rather than one writable.write(file) call) so we can
-  // report real progress on a ~100MB file instead of the UI sitting silent
-  // for however long the write takes.
-  const reader = file.stream().getReader();
-  let written = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    await writable.write(value);
-    written += value.length;
-    if (onProgress) onProgress(written);
-  }
-  await writable.close();
-}
-
-async function refreshPiperModelStatus() {
-  const voiceId = currentPiperVoiceId();
-  if (!voiceId) { piperModelRow.style.display = 'none'; return; }
-  piperModelRow.style.display = 'flex';
-  const present = await piperFilesPresent(voiceId);
-  piperModelStatus.textContent = present
-    ? 'Model ready — stored offline ✓'
-    : 'Model not downloaded yet';
-}
-
-btnPiperUpload.addEventListener('click', () => piperFileInput.click());
-
-piperFileInput.addEventListener('change', async () => {
-  const voiceId = currentPiperVoiceId();
-  const files = [...piperFileInput.files];
-  if (!voiceId || !files.length) return;
-
-  const recognized = files
-    .map(file => {
-      const lower = file.name.toLowerCase();
-      const target = lower.endsWith('.onnx.json') ? voiceId + '.onnx.json'
-                    : lower.endsWith('.onnx')      ? voiceId + '.onnx'
-                    : null;
-      return target ? { file, target } : null;
-    })
-    .filter(Boolean);
-
-  if (!recognized.length) {
-    piperModelStatus.textContent = 'No .onnx/.onnx.json files recognized in selection';
-    piperFileInput.value = '';
-    return;
-  }
-
-  // Prominent, unmistakable feedback — this is a ~100MB write that can take
-  // a while, so it reuses the same pulsing-dot/progress-bar treatment as
-  // the CDN download path instead of only updating the small sub-line.
-  btnPiperUpload.disabled = true;
-  const totalBytes = recognized.reduce((sum, r) => sum + r.file.size, 0);
-  let bytesDone = 0;
-  showLoadingFeedback('Saving voice model files… 0%');
-
-  try {
-    for (const { file, target } of recognized) {
-      let fileWritten = 0;
-      await writePiperFile(target, file, written => {
-        bytesDone += (written - fileWritten);
-        fileWritten = written;
-        const pct = totalBytes ? Math.round(bytesDone * 100 / totalBytes) : 0;
-        pLabel.textContent = `Saving voice model files… ${pct}%`;
-        piperModelStatus.textContent = `Saving… ${pct}%`;
-        pFill.className = '';
-        pFill.style.width = pct + '%';
-      });
-    }
-    setStatus('ready', true);
-    pFill.style.width = '0%';
-  } catch (err) {
-    console.error('Saving voice model failed', err);
-    setStatus('ready', true);
-    piperModelStatus.textContent = 'Failed to save model files — try again';
-  }
-  btnPiperUpload.disabled = false;
-  piperFileInput.value = '';
-  refreshPiperModelStatus();
-});
-
-function forceSpeakPiper(text) {
+function forceSpeakKokoro(text) {
   if (!text.trim()) return;
-  activeEngine = 'piper';
+  activeEngine = 'kokoro';
   stopAll();
-  piperChunks = chunkText(text);
-  if (!piperChunks.length) return;
-  piperTotalLen = piperChunks.join(' ').length;
-  piperChunkIndex = 0;
+  kokoroChunks = chunkText(text);
+  if (!kokoroChunks.length) return;
+  kokoroTotalLen = kokoroChunks.join(' ').length;
+  kokoroChunkIndex = 0;
   showLoadingFeedback('Starting…');
-  playNextPiperChunk();
+  playNextKokoroChunk();
 }
 
-async function playNextPiperChunk() {
-  if (activeEngine !== 'piper') return;
+async function playNextKokoroChunk() {
+  if (activeEngine !== 'kokoro') return;
 
-  if (piperChunkIndex >= piperChunks.length) {
+  if (kokoroChunkIndex >= kokoroChunks.length) {
     isPlaying = false; isPaused = false;
     pFill.style.width = '100%'; pWord.textContent = '✓ Done';
     setStatus('ready', true);
     return;
   }
 
-  const voiceId = voiceSel.value.slice('piper:'.length);
-  const chunk = piperChunks[piperChunkIndex];
+  const voiceId = voiceSel.value.slice(KOKORO_VOICE_PREFIX.length);
+  const chunk = kokoroChunks[kokoroChunkIndex];
 
   try {
-    const mod = await getPiperModule();
-    await ensurePiperVoiceReady(mod, voiceId);
-    if (activeEngine !== 'piper') return;
+    const mod = await getKokoroModule();
+    const tts = await ensureKokoroReady(mod);
+    if (activeEngine !== 'kokoro') return;
 
     pDot.className = 'p-dot loading';
     pLabel.className = 'loading';
     pLabel.textContent = 'Synthesizing…';
     pFill.className = '';
-    const wav = await mod.predict({ text: chunk, voiceId });
-    if (activeEngine !== 'piper') return;
+    const result = await tts.generate(chunk, { voice: voiceId });
+    if (activeEngine !== 'kokoro') return;
 
-    const url = URL.createObjectURL(wav);
-    piperAudio = new Audio(url);
-    piperAudio.playbackRate = currentSpeed;
-    piperAudio.preservesPitch = true;
+    const url = URL.createObjectURL(result.toBlob());
+    kokoroAudio = new Audio(url);
+    kokoroAudio.playbackRate = currentSpeed;
+    kokoroAudio.preservesPitch = true;
     pWord.textContent = chunk.length > 44 ? chunk.slice(0, 44) + '…' : chunk;
 
-    piperAudio.onplay = () => {
+    kokoroAudio.onplay = () => {
       isPlaying = true; isPaused = false;
       player.classList.add('visible');
       setStatus('playing');
     };
-    piperAudio.onended = () => {
+    kokoroAudio.onended = () => {
       URL.revokeObjectURL(url);
-      if (activeEngine !== 'piper' || !isPlaying) return;
-      const charsBefore = piperChunks.slice(0, piperChunkIndex + 1).join(' ').length;
-      pFill.style.width = Math.min((charsBefore / piperTotalLen) * 100, 100).toFixed(1) + '%';
-      piperChunkIndex++;
-      playNextPiperChunk();
+      if (activeEngine !== 'kokoro' || !isPlaying) return;
+      const charsBefore = kokoroChunks.slice(0, kokoroChunkIndex + 1).join(' ').length;
+      pFill.style.width = Math.min((charsBefore / kokoroTotalLen) * 100, 100).toFixed(1) + '%';
+      kokoroChunkIndex++;
+      playNextKokoroChunk();
     };
-    piperAudio.onerror = () => {
-      if (activeEngine !== 'piper') return;
-      piperChunkIndex++;
-      playNextPiperChunk();
+    kokoroAudio.onerror = () => {
+      if (activeEngine !== 'kokoro') return;
+      kokoroChunkIndex++;
+      playNextKokoroChunk();
     };
 
-    await piperAudio.play();
+    await kokoroAudio.play();
   } catch (err) {
-    console.error('Piper TTS failed', err);
+    console.error('Kokoro TTS failed', err);
     isPlaying = false; isPaused = false;
     setStatus('ready', true);
     pLabel.textContent = 'Neural voice failed — try a Browser voice instead';
@@ -1022,7 +921,7 @@ function textForMode() {
 
 function startReading() {
   const text = textForMode();
-  if (currentEngine() === 'piper') forceSpeakPiper(text);
+  if (currentEngine() === 'kokoro') forceSpeakKokoro(text);
   else forceSpeak(text);
 }
 
@@ -1041,7 +940,7 @@ function showLoadingFeedback(label) {
 
 btnPlay.addEventListener('click', () => {
   if (isPaused) {
-    if (activeEngine === 'piper' && piperAudio) piperAudio.play();
+    if (activeEngine === 'kokoro' && kokoroAudio) kokoroAudio.play();
     else synth.resume();
     isPaused = false; isPlaying = true; setStatus('playing');
     return;
@@ -1051,7 +950,7 @@ btnPlay.addEventListener('click', () => {
 
 btnPause.addEventListener('click', () => {
   if (!isPlaying || isPaused) return;
-  if (activeEngine === 'piper' && piperAudio) piperAudio.pause();
+  if (activeEngine === 'kokoro' && kokoroAudio) kokoroAudio.pause();
   else synth.pause();
   isPaused = true; isPlaying = false; setStatus('paused');
 });
@@ -1087,10 +986,10 @@ document.addEventListener('keydown', e => {
   if (e.code==='Space') {
     e.preventDefault();
     if (isPaused) {
-      if (activeEngine === 'piper' && piperAudio) piperAudio.play(); else synth.resume();
+      if (activeEngine === 'kokoro' && kokoroAudio) kokoroAudio.play(); else synth.resume();
       isPaused=false; isPlaying=true; setStatus('playing');
     } else if (isPlaying) {
-      if (activeEngine === 'piper' && piperAudio) piperAudio.pause(); else synth.pause();
+      if (activeEngine === 'kokoro' && kokoroAudio) kokoroAudio.pause(); else synth.pause();
       isPaused=true; isPlaying=false; setStatus('paused');
     }
   }
