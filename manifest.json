@@ -1,0 +1,14 @@
+{
+  "name": "Reading Doc",
+  "short_name": "Reading Doc",
+  "description": "A private, offline document library and text-to-speech reader.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0C0E14",
+  "theme_color": "#0C0E14",
+  "icons": [
+    { "src": "icons/icon-128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }
+  ]
+}
