@@ -1,1152 +1,863 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="theme-color" content="#0C0E14"/>
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="Reading Doc"/>
-  <title>Reading Doc</title>
-  <link rel="manifest" href="manifest.json"/>
-  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Calculus Nudge Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky lab switcher; each lab = live canvas (left) + control/readout panel (right), notes underneath. Dark chalkboard world by choice. */
+:root{
+  color-scheme: dark;
+  --bg:#0a0c0f;
+  --stage:#06080a;
+  --panel:#11151a;
+  --line:#222a33;
+  --ink:#ece9e1;
+  --dim:#8d97a1;
+  --faint:#56606b;
+  --blue:#58C4DD;
+  --teal:#5CD0B3;
+  --green:#83C167;
+  --yellow:#F4D35E;
+  --red:#FC6255;
+  --gold:#F0AC5F;
+  --purple:#B189C7;
+  --grid:rgba(88,196,221,.09);
+  --axis:rgba(236,233,225,.38);
+  --f-math:"STIX Two Text","Cambria Math","Times New Roman",serif;
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1320px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-left,0px))}
+.top .wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
+.brand b{font-family:var(--f-math);font-weight:600;font-size:22px;letter-spacing:.01em}
+.brand b i{color:var(--blue);font-style:italic}
+.brand span{color:var(--dim);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{color:var(--dim);text-decoration:none;padding:6px 12px;border-radius:999px;font-size:13.5px;white-space:nowrap;border:1px solid transparent}
+nav.tabs a:hover{color:var(--ink)}
+nav.tabs a[aria-current="page"]{color:var(--bg);background:var(--blue);font-weight:600}
+nav.tabs a:focus-visible,button:focus-visible,input:focus-visible+i,.seg button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 
-  <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+.lab{padding-top:26px}
+.lab-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 24px;align-items:end;margin-bottom:16px}
+.eyebrow{margin:0 0 4px;color:var(--teal);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+h2{font-family:var(--f-math);font-weight:400;font-size:clamp(28px,3.4vw,40px);line-height:1.1;margin:0;text-wrap:balance}
+h2 em{color:var(--blue)}
+.lede{margin:8px 0 0;color:var(--dim);max-width:68ch}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{font:500 13px var(--f-ui);color:var(--dim);background:transparent;border:1px solid var(--line);padding:6px 11px;border-radius:6px;cursor:pointer}
+.seg button:hover{color:var(--ink);border-color:var(--faint)}
+.seg button[aria-pressed="true"]{color:var(--ink);border-color:var(--blue);background:rgba(88,196,221,.12)}
+.seg.math button{font-family:var(--f-math);font-size:15px;font-style:italic}
 
-    :root {
-      --bg:        #0C0E14;
-      --surface:   #13161F;
-      --surface2:  #1A1D28;
-      --surface3:  #222638;
-      --border:    #252A3A;
-      --border2:   #323850;
-      --text:      #E2E4EE;
-      --muted:     #6B7280;
-      --accent:    #3B3FE4;
-      --accent-lt: #6C8EF5;
-      --accent-bg: rgba(59,63,228,0.12);
-      --accent-bd: rgba(59,63,228,0.35);
-      --light:     #A8BFFF;
-      --success:   #34D399;
-      --warn:      #FBBF24;
-      --r:         10px;
-      --r-lg:      16px;
-    }
+.lab-body{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start}
+.stage{position:relative;min-width:0}
+.stage canvas{display:block;width:100%;height:clamp(360px,64vh,660px);background:var(--stage);border:1px solid var(--line);border-radius:8px;touch-action:none;cursor:crosshair}
+.stage-tools{position:absolute;top:10px;right:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.btn{font:500 12.5px var(--f-ui);color:var(--ink);background:rgba(17,21,26,.88);border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer}
+.btn:hover{border-color:var(--blue)}
+.btn.primary{background:var(--blue);color:#061015;border-color:var(--blue);font-weight:600}
+.hint{position:absolute;left:12px;bottom:10px;color:var(--faint);font-size:12px;pointer-events:none}
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h3{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.group{display:flex;flex-direction:column;gap:10px}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13.5px}
+.ctl label span{font-family:var(--f-math);font-size:16px}
+.ctl output{font:500 12.5px var(--f-mono);color:var(--yellow);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--blue);margin:4px 0 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:4px 10px 4px 8px;cursor:pointer;user-select:none}
+.chip input{position:absolute;opacity:0;width:1px;height:1px}
+.chip i{width:10px;height:10px;border-radius:50%;border:2px solid var(--c);display:inline-block}
+.chip:has(input:checked){color:var(--ink);border-color:color-mix(in srgb,var(--c) 55%,var(--line))}
+.chip:has(input:checked) i{background:var(--c)}
+.chip span{font-family:var(--f-ui)}
+.row-btns{display:flex;flex-wrap:wrap;gap:6px}
 
-    /* ── Install bar ── */
-    #install-bar {
-      display: none; align-items: center; gap: 10px;
-      background: var(--accent-bg); border-bottom: 1px solid var(--accent-bd);
-      padding: 8px 1.2rem; font-size: 13px; color: var(--light); flex-shrink: 0;
-    }
-    #file-protocol-bar {
-      display: none; align-items: center; gap: 10px;
-      background: rgba(245,158,11,.12); border-bottom: 1px solid var(--warn);
-      padding: 8px 1.2rem; font-size: 13px; color: var(--light); flex-shrink: 0;
-    }
+dl.read{margin:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 12px;font-size:13px;border-top:1px solid var(--line);padding-top:12px}
+dl.read dt{color:var(--dim);font-family:var(--f-math);font-size:15px;min-width:0}
+dl.read dd{margin:0;font:500 13px var(--f-mono);text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+dl.read dd.y{color:var(--yellow)} dl.read dd.g{color:var(--green)} dl.read dd.b{color:var(--blue)} dl.read dd.r{color:var(--red)} dl.read dd.p{color:var(--purple)} dl.read dd.o{color:var(--gold)} dl.read dd.t{color:var(--teal)}
+dl.read dt.sep,dl.read dd.sep{border-top:1px dashed var(--line);padding-top:6px;margin-top:2px}
+.status{font:600 12.5px var(--f-ui);padding:8px 10px;border-radius:6px;border:1px solid var(--line)}
+.status.ok{color:var(--green);border-color:rgba(131,193,103,.45);background:rgba(131,193,103,.08)}
+.status.bad{color:var(--red);border-color:rgba(252,98,85,.45);background:rgba(252,98,85,.08)}
+.seq{font:12.5px var(--f-mono);color:var(--dim);line-height:1.7;word-break:break-word}
+.seq b{color:var(--yellow);font-weight:500}
 
-    /* ── Header ── */
-    header {
-      display: flex; align-items: center; gap: 10px;
-      padding: .85rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .hdr-icon {
-      width: 30px; height: 30px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
-    }
-    .hdr-icon img { width: 100%; height: 100%; object-fit: cover; }
-    .hdr-name { font-size: 14px; font-weight: 600; letter-spacing: -0.02em; }
-    .hdr-version {
-      font-size: 10px; font-weight: 600; color: var(--muted);
-      background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 20px; padding: 1px 7px; margin-left: 2px;
-    }
-    .hdr-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-    .kbd-hint  { font-size: 11px; color: var(--border2); }
-    kbd {
-      font-family: inherit; font-size: 10px;
-      background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 4px; padding: 1px 5px; color: var(--muted);
-    }
+.notes{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;margin-top:16px}
+.note{border-top:1px solid var(--line);padding-top:12px;min-width:0}
+.note h4{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);font-weight:600}
+.note ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:#c9c6be;max-width:70ch}
+.note li::marker{color:var(--faint)}
+.m{font-family:var(--f-math);font-style:italic;font-size:1.08em;color:var(--ink)}
+.eq{font-family:var(--f-math);font-size:17px;color:var(--ink)}
 
-    /* ── Tab bar ── */
-    .tabs {
-      display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0;
-    }
-    .tab {
-      flex: 1; padding: 10px 4px; font-size: 13px; font-weight: 500;
-      font-family: inherit; background: none; border: none;
-      color: var(--muted); cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: color .15s, border-color .15s;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-    }
-    .tab svg { width: 15px; height: 15px; flex-shrink: 0; }
-    .tab:hover { color: var(--text); }
-    .tab.active { color: var(--accent-lt); border-bottom-color: var(--accent-lt); }
+.sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card .tag{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.card .f{font-family:var(--f-math);font-size:21px;line-height:1.3;color:var(--ink);overflow-x:auto}
+.card .f sup,.card .f sub{font-size:.65em}
+.card p{margin:0;color:#c3c0b8;font-size:14px}
+.card a{align-self:flex-start;color:var(--blue);font-size:13px;text-decoration:none;border-bottom:1px solid rgba(88,196,221,.4)}
+.card a:hover{border-color:var(--blue)}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.86em;line-height:1.1;margin:0 2px}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}
 
-    /* ── Panels ── */
-    .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
-    .panel.active { display: flex; }
+@media (max-width:980px){
+  .lab-body{grid-template-columns:minmax(0,1fr)}
+  .notes{grid-template-columns:minmax(0,1fr)}
+  .lab-head{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:560px){
+  .stage canvas{height:360px}
+  .brand span{display:none}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
 
-    /* ── Library panel ── */
-    .lib-toolbar {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-    }
-    .lib-toolbar span { font-size: 12px; color: var(--muted); flex: 1; }
-
-    .doc-list { flex: 1; overflow-y: auto; padding: 8px; }
-
-    .doc-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 12px; border-radius: var(--r);
-      cursor: pointer; border: 1px solid transparent;
-      transition: background .12s, border-color .12s;
-      margin-bottom: 4px;
-    }
-    .doc-item:hover { background: var(--surface2); }
-    .doc-item.active { background: var(--accent-bg); border-color: var(--accent-bd); }
-    .doc-item-icon {
-      width: 36px; height: 36px; border-radius: 8px;
-      background: var(--surface3); display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .doc-item-icon svg { width: 18px; height: 18px; color: var(--accent-lt); }
-    .doc-item-info { flex: 1; min-width: 0; }
-    .doc-item-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .doc-item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .doc-item-del {
-      opacity: 0; background: none; border: none; cursor: pointer;
-      color: var(--muted); font-size: 18px; line-height: 1; padding: 4px;
-      border-radius: 6px; transition: color .12s;
-    }
-    .doc-item:hover .doc-item-del { opacity: 1; }
-    .doc-item-del:hover { color: #f87171; }
-
-    .lib-empty {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 10px; padding: 2rem; text-align: center; color: var(--muted);
-    }
-    .lib-empty svg { width: 40px; height: 40px; opacity: .3; }
-    .lib-empty p { font-size: 13px; line-height: 1.6; max-width: 240px; }
-
-    /* ── Paste text panel ── */
-    .paste-panel {
-      display: flex; flex-direction: column; gap: 0; flex: 1; overflow: hidden;
-    }
-    .paste-toolbar {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-    }
-    #paste-area {
-      flex: 1; padding: 16px; font-size: 15px; line-height: 1.7;
-      font-family: 'Lora', Georgia, serif;
-      color: var(--text); background: transparent;
-      border: none; outline: none; resize: none;
-    }
-    #paste-area::placeholder { color: var(--muted); font-family: 'Inter', sans-serif; font-style: italic; }
-
-    /* ── Upload panel ── */
-    #drop-zone {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 16px; padding: 2rem; text-align: center;
-    }
-    #drop-zone.drag-over { background: var(--accent-bg); }
-    .dz-icon {
-      width: 72px; height: 72px;
-      background: var(--surface2); border: 2px dashed var(--border2);
-      border-radius: 20px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .dz-icon svg { width: 32px; height: 32px; color: var(--muted); }
-    .dz-title { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
-    .dz-sub { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 300px; }
-
-    /* ── Doc reader ── */
-    #doc-reader {
-      display: none; flex: 1; flex-direction: column; overflow: hidden;
-    }
-    #doc-reader.visible { display: flex; }
-
-    .reader-toolbar {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 14px; border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .reader-title {
-      font-size: 13px; font-weight: 500;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
-    }
-
-    #doc-frame {
-      flex: 1; overflow-y: auto;
-      padding: 1.5rem 2rem;
-      font-family: 'Lora', Georgia, serif;
-      font-size: 16px; line-height: 1.8; color: var(--text);
-    }
-    @media (max-width: 480px) { #doc-frame { padding: 1rem; font-size: 15px; } }
-
-    #doc-frame h1,#doc-frame h2,#doc-frame h3 {
-      font-family: 'Inter', sans-serif; font-weight: 600;
-      margin: 1.3em 0 .4em; line-height: 1.3;
-    }
-    #doc-frame h1 { font-size: 1.5em; }
-    #doc-frame h2 { font-size: 1.25em; }
-    #doc-frame h3 { font-size: 1.05em; }
-    #doc-frame p  { margin: 0 0 .85em; }
-    #doc-frame a  { color: var(--accent-lt); }
-    #doc-frame ul,#doc-frame ol { padding-left: 1.3em; margin-bottom: .85em; }
-    #doc-frame li { margin-bottom: .25em; }
-    #doc-frame code { font-family: monospace; font-size: .85em; background: var(--surface2); border-radius: 4px; padding: 1px 5px; }
-    #doc-frame pre  { font-family: monospace; font-size: .85em; background: var(--surface2); border-radius: 8px; padding: 12px; overflow-x: auto; margin-bottom: .85em; }
-    #doc-frame blockquote { border-left: 3px solid var(--border2); padding-left: 1em; color: var(--muted); margin-bottom: .85em; }
-    #doc-frame img { max-width: 100%; border-radius: 8px; }
-    #doc-frame table { width: 100%; border-collapse: collapse; font-size: .9em; margin-bottom: .85em; }
-    #doc-frame td,#doc-frame th { border: 1px solid var(--border); padding: 6px 10px; }
-    #doc-frame th { background: var(--surface2); font-family: 'Inter', sans-serif; }
-
-    .su-hl { background: rgba(108,142,245,.25) !important; border-radius: 3px; outline: 1.5px solid rgba(108,142,245,.45); }
-
-    /* ── Player bar ── */
-    #player {
-      background: var(--surface); border-top: 1px solid var(--border);
-      padding: 10px 14px; flex-shrink: 0;
-      display: none; flex-direction: column; gap: 8px;
-    }
-    #player.visible { display: flex; }
-
-    .player-row1 { display: flex; align-items: center; gap: 8px; }
-    .p-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--border2); flex-shrink: 0; transition: background .2s;
-    }
-    .p-dot.playing { background: var(--success); box-shadow: 0 0 5px var(--success); }
-    .p-dot.paused  { background: var(--warn); }
-    .p-dot.loading { background: var(--accent-lt); animation: pdot-pulse 1s ease-in-out infinite; }
-    @keyframes pdot-pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(108,142,245,.55); }
-      50%      { box-shadow: 0 0 0 5px rgba(108,142,245,0); }
-    }
-    #p-label { font-size: 12px; color: var(--muted); }
-    #p-label.loading { color: var(--accent-lt); font-weight: 600; }
-    #p-word  { flex: 1; font-size: 12px; font-weight: 500; color: var(--light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-    .p-prog-bg { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-    #p-fill { height: 100%; background: var(--accent-lt); border-radius: 2px; width: 0%; transition: width .2s linear; }
-    #p-fill.indeterminate {
-      width: 40% !important; transition: none;
-      animation: pfill-slide 1.1s ease-in-out infinite;
-    }
-    @keyframes pfill-slide {
-      0%   { margin-left: -40%; }
-      100% { margin-left: 100%; }
-    }
-
-    .player-row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-
-    /* speed chips */
-    .speed-chips { display: flex; gap: 5px; flex-wrap: wrap; }
-    .sc {
-      font-size: 11px; font-weight: 600; font-family: inherit;
-      padding: 3px 9px; border-radius: 20px;
-      border: 1px solid var(--border2); background: transparent;
-      color: var(--muted); cursor: pointer; transition: all .12s;
-    }
-    .sc:hover { color: var(--text); border-color: var(--accent-lt); }
-    .sc.active { background: var(--accent-bg); color: var(--light); border-color: var(--accent-bd); }
-
-    /* voice select */
-    select.p-voice {
-      padding: 4px 8px; font-size: 12px; font-family: inherit;
-      color: var(--text); background: var(--surface2);
-      border: 1px solid var(--border2); border-radius: 7px;
-      cursor: pointer; outline: none; max-width: 200px; flex-shrink: 0;
-    }
-    select.p-voice:focus { border-color: var(--accent-lt); }
-
-    /* transport */
-    .transport { display: flex; gap: 6px; margin-left: auto; }
-
-    .btn {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 7px 14px; font-size: 13px; font-weight: 500;
-      font-family: inherit; border-radius: var(--r);
-      cursor: pointer; border: 1px solid var(--border2);
-      background: var(--surface2); color: var(--text);
-      transition: background .12s; user-select: none; white-space: nowrap;
-    }
-    .btn:hover   { background: var(--border); }
-    .btn:active  { transform: scale(.97); }
-    .btn:disabled { opacity: .3; cursor: not-allowed; pointer-events: none; }
-    .btn.primary { background: var(--accent); border-color: transparent; color: #fff; }
-    .btn.primary:hover { background: #3035cc; }
-    .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
-
-    .btn-sm {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 5px 11px; font-size: 12px; font-weight: 500;
-      font-family: inherit; border-radius: 8px;
-      cursor: pointer; border: 1px solid var(--border2);
-      background: var(--surface2); color: var(--muted);
-      transition: background .12s; user-select: none;
-    }
-    .btn-sm:hover { color: var(--text); background: var(--border); }
-    .btn-sm svg { width: 13px; height: 13px; flex-shrink: 0; }
-
-    .upload-btn {
-      display: flex; align-items: center; justify-content: center; gap: 7px;
-      padding: 11px 22px; font-size: 14px; font-weight: 500; font-family: inherit;
-      border-radius: var(--r); cursor: pointer;
-      border: 1.5px solid var(--accent-lt); background: var(--accent-bg);
-      color: var(--light); transition: all .12s;
-    }
-    .upload-btn:hover { background: rgba(59,63,228,0.2); }
-    .upload-btn svg { width: 18px; height: 18px; }
-
-    footer {
-      text-align: center; padding: .6rem;
-      font-size: 11px; color: var(--border2);
-      border-top: 1px solid var(--border); flex-shrink: 0;
-    }
-  </style>
-</head>
-<body>
-
-<div id="install-bar">
-  <span style="flex:1"><strong>Install Reading Doc</strong> — offline access, home screen icon</span>
-  <button class="btn-sm" id="btn-install">Install</button>
-  <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">×</button>
-</div>
-
-<div id="file-protocol-bar">
-  <span style="flex:1"><strong>Neural (Kokoro) voice is unavailable here.</strong> You opened this file directly (file://) — the browser storage the neural voice needs only works when the page is served over http/https. Double-click <strong>Start ReadingDoc.bat</strong> in this folder instead, or use a Browser voice below.</span>
-  <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;">×</button>
-</div>
-
-<header>
-  <div class="hdr-icon">
-    <img src="icons/icon-128.png" alt="Reading Doc"/>
-  </div>
-  <span class="hdr-name">Reading Doc</span>
-  <span class="hdr-version">V0.5</span>
-  <div class="hdr-right">
-    <span class="kbd-hint"><kbd>Space</kbd> pause · <kbd>Esc</kbd> stop</span>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><b>Calculus <i>Nudge</i> Lab</b><span>Essence of Calculus · trainer</span></div>
+    <nav class="tabs" aria-label="Labs">
+      <a href="#graph" data-view="graph">The Graph</a>
+      <a href="#nudge" data-view="nudge">Nudge Geometry</a>
+      <a href="#chain" data-view="chain">Chains &amp; Constraints</a>
+      <a href="#limits" data-view="limits"><i>e</i> &amp; Limits</a>
+      <a href="#transform" data-view="transform">Transformations</a>
+      <a href="#sheet" data-view="sheet">Formula Map</a>
+    </nav>
   </div>
 </header>
 
-<div class="tabs">
-  <button class="tab active" data-tab="library">
-    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 3.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm2-2a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1h-7zM0 13a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 16 13V6a1.5 1.5 0 0 0-1.5-1.5h-13A1.5 1.5 0 0 0 0 6v7zm1.5.5A.5.5 0 0 1 1 13V6a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-13z"/></svg>
-    Library
-  </button>
-  <button class="tab" data-tab="paste">
-    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5H3.5A1.5 1.5 0 0 0 2 3h12a1.5 1.5 0 0 0-1.5-1.5H11A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
-    Paste Text
-  </button>
-  <button class="tab" data-tab="upload">
-    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
-    Upload File
-  </button>
-</div>
+<main class="wrap">
 
-<!-- ── LIBRARY PANEL ── -->
-<div class="panel active" id="panel-library">
-  <div id="lib-list-view" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
-    <div class="lib-toolbar">
-      <span id="lib-count">0 documents</span>
-      <button class="btn-sm" id="lib-upload-btn">
-        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
-        Add file
-      </button>
+<!-- =============== GRAPH =============== -->
+<section class="lab" data-view="graph" hidden>
+  <div class="lab-head">
+    <div>
+      <p class="eyebrow">Derivative · integral · FTC · average · f″ · Taylor</p>
+      <h2>One graph, <em>every</em> idea</h2>
+      <p class="lede">Drag the point <span class="m">a</span> along the curve and the marker <span class="m">L</span> on the axis. Every layer is anchored to the same point, so you can watch slope, area, curvature and approximation talk to each other.</p>
     </div>
-    <div class="doc-list" id="doc-list"></div>
+    <div class="seg math" id="g-fn"></div>
   </div>
-
-  <div id="doc-reader">
-    <div class="reader-toolbar">
-      <button class="btn-sm" id="btn-back" style="flex-shrink:0;">
-        <svg viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
-        Library
-      </button>
-      <span class="reader-title" id="reader-title">—</span>
-      <button class="btn-sm" id="btn-read-page" style="flex-shrink:0;">
-        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5a.5.5 0 0 1 .765-.424l10 5.5a.5.5 0 0 1 0 .848l-10 5.5A.5.5 0 0 1 3 13.5v-11z"/></svg>
-        Read
-      </button>
+  <div class="lab-body">
+    <div class="stage">
+      <canvas id="cv-graph" aria-label="Interactive function graph"></canvas>
+      <div class="stage-tools">
+        <button class="btn" id="g-zoomA">Zoom into a</button>
+        <button class="btn" id="g-zout" aria-label="Zoom out">−</button>
+        <button class="btn" id="g-zin" aria-label="Zoom in">+</button>
+        <button class="btn" id="g-reset">Reset view</button>
+      </div>
+      <div class="hint">drag a or L · drag empty space to pan · scroll to zoom</div>
     </div>
-    <div id="doc-frame"></div>
+    <aside class="panel" id="pn-graph"></aside>
   </div>
-</div>
-
-<!-- ── PASTE TEXT PANEL ── -->
-<div class="panel" id="panel-paste">
-  <div class="paste-toolbar">
-    <span id="paste-stats" style="font-size:12px;color:var(--muted);">0 words</span>
-    <button class="btn-sm" id="btn-clipboard">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/></svg>
-      Paste clipboard
-    </button>
-    <button class="btn-sm" id="btn-save-doc">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/></svg>
-      Save to library
-    </button>
-    <button class="btn primary" id="btn-read-paste" style="margin-left:auto;" disabled>
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5a.5.5 0 0 1 .765-.424l10 5.5a.5.5 0 0 1 0 .848l-10 5.5A.5.5 0 0 1 3 13.5v-11z"/></svg>
-      Read
-    </button>
+  <div class="notes">
+    <div class="note"><h4>What each layer means</h4><ul>
+      <li><b style="color:var(--yellow)">Secant</b> through <span class="m">a</span> and <span class="m">a+dx</span>: its slope <span class="m">df/dx</span> is a real ratio of two real nudges. The derivative is what that ratio <em>approaches</em> as <span class="m">dx</span> shrinks. <span class="m">dx</span> never becomes 0.</li>
+      <li><b>Tangent</b>: the best constant approximation of the rate near <span class="m">a</span>. "Instantaneous rate" is shorthand for this.</li>
+      <li><b style="color:var(--green)">f′</b> plots the tangent slope at every input. <b style="color:var(--red)">f″</b> plots how fast that slope changes: positive where the curve bends up, negative where it bends down.</li>
+      <li><b style="color:var(--blue)">Rectangles</b> approximate <span class="m">Σ f(x)·dx</span> from <span class="m">L</span> to <span class="m">a</span>. Here <span class="m">dx</span> plays two roles: it is a factor in each term and the spacing between samples. Below the axis counts as negative (signed area).</li>
+      <li><b style="color:var(--purple)">A(x)</b> is the area from <span class="m">L</span> up to <span class="m">x</span>. Its slope at <span class="m">a</span> equals the height of <span class="m">f</span> at <span class="m">a</span>, because a nudge <span class="m">dx</span> adds a sliver ≈ <span class="m">f(a)·dx</span>. That is the fundamental theorem.</li>
+      <li><b style="color:var(--teal)">Average</b> = area ÷ width. On <span class="m">A(x)</span> the same number is the slope of the chord from <span class="m">L</span> to <span class="m">a</span>: average height of <span class="m">f</span> = average slope of its antiderivative.</li>
+      <li><b style="color:var(--gold)">Taylor Pₙ</b> copies the value, slope, curvature and higher derivatives of <span class="m">f</span> at the single point <span class="m">a</span>, and turns that into an approximation around <span class="m">a</span>.</li>
+    </ul></div>
+    <div class="note"><h4>Try this</h4><ul>
+      <li>Press <b>Shrink dx → 0</b>. The secant rotates into the tangent and the gap readout drains to zero.</li>
+      <li>Press <b>Zoom into a</b> four or five times. The curve straightens into its own tangent line. Local linearity is the whole reason derivatives work.</li>
+      <li>Pick <span class="m">x³ − 3x</span>, turn on <span class="m">f′</span> and <span class="m">f″</span>. Where <span class="m">f″</span> crosses zero the bending flips and <span class="m">f′</span> hits a turning point.</li>
+      <li>Pick <span class="m">t(8 − t)</span> as a velocity. Set <span class="m">L = 0</span> and drag <span class="m">a</span> to 8: the area is the distance travelled, 85.33 m. Narrow the rectangles and watch <span class="m">Σ</span> close in on <span class="m">∫</span>.</li>
+      <li>Pick <span class="m">eˣ</span> and turn on <span class="m">f′</span>, <span class="m">f″</span>: all three curves sit on top of each other.</li>
+      <li>Pick <span class="m">ln x</span>, put <span class="m">a</span> at 1, Taylor order 10. It hugs <span class="m">ln x</span> between 0 and 2 and then thrashes past 2: radius of convergence.</li>
+      <li>Pick <span class="m">sin x</span>, set <span class="m">L = 0</span>, <span class="m">a = π</span>. The area is exactly 2 and the average is 2/π ≈ 0.64.</li>
+    </ul></div>
   </div>
-  <textarea id="paste-area" placeholder="Paste or type anything here — articles, emails, notes…"></textarea>
-</div>
+</section>
 
-<!-- ── UPLOAD PANEL ── -->
-<div class="panel" id="panel-upload">
-  <div id="drop-zone">
-    <div class="dz-icon">
-      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M16 4v16M10 8l6-4 6 4M4 22v4a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+<!-- =============== NUDGE =============== -->
+<section class="lab" data-view="nudge" hidden>
+  <div class="lab-head">
+    <div>
+      <p class="eyebrow">Area of a circle · power rule · 1/x · sine · product rule</p>
+      <h2>Formulas you can <em>see</em> growing</h2>
+      <p class="lede">Each formula is the size of the new sliver created by a nudge. Make the nudge smaller and the higher-order pieces vanish faster than the main strips.</p>
     </div>
-    <div class="dz-title">Upload a document</div>
-    <div class="dz-sub">HTML or PDF file — stored in your browser, never uploaded anywhere.</div>
-    <button class="upload-btn" id="dz-btn">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
-      Choose HTML or PDF
-    </button>
+    <div class="seg" id="n-mode"></div>
   </div>
-</div>
+  <div class="lab-body">
+    <div class="stage"><canvas id="cv-nudge" aria-label="Nudge geometry"></canvas><div class="hint" id="n-hint"></div></div>
+    <aside class="panel" id="pn-nudge"></aside>
+  </div>
+  <div class="notes" id="n-notes"></div>
+</section>
 
-<!-- ── PLAYER ── -->
-<div id="player">
-  <div class="p-prog-bg"><div id="p-fill"></div></div>
-  <div class="player-row1">
-    <div class="p-dot" id="p-dot"></div>
-    <span id="p-label">Ready</span>
-    <span id="p-word"></span>
-  </div>
-  <div class="player-row2">
-    <div class="speed-chips">
-      <button class="sc" data-s="0.8">0.8×</button>
-      <button class="sc active" data-s="1">1×</button>
-      <button class="sc" data-s="1.3">1.3×</button>
-      <button class="sc" data-s="1.6">1.6×</button>
-      <button class="sc" data-s="2">2×</button>
+<!-- =============== CHAIN =============== -->
+<section class="lab" data-view="chain" hidden>
+  <div class="lab-head">
+    <div>
+      <p class="eyebrow">Chain rule · implicit differentiation · related rates · d(ln x)</p>
+      <h2>Nudges that <em>pass along</em></h2>
+      <p class="lede">A nudge to one quantity forces nudges in everything tied to it. The chain rule follows a nudge down a pipeline. Implicit differentiation asks which nudges keep an equation true.</p>
     </div>
-    <select class="p-voice" id="voice-sel">
-      <option value="">Loading voices…</option>
-    </select>
-    <div class="transport">
-      <button class="btn primary" id="btn-play" disabled>
-        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5a.5.5 0 0 1 .765-.424l10 5.5a.5.5 0 0 1 0 .848l-10 5.5A.5.5 0 0 1 3 13.5v-11z"/></svg>
-        Play
-      </button>
-      <button class="btn" id="btn-pause" disabled>
-        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5zm6 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5z"/></svg>
-        Pause
-      </button>
-      <button class="btn" id="btn-stop" disabled>
-        <svg viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>
-        Stop
-      </button>
-    </div>
+    <div class="seg" id="c-mode"></div>
   </div>
-</div>
+  <div class="lab-body">
+    <div class="stage"><canvas id="cv-chain" aria-label="Chain and constraint visualiser"></canvas><div class="hint" id="c-hint"></div></div>
+    <aside class="panel" id="pn-chain"></aside>
+  </div>
+  <div class="notes" id="c-notes"></div>
+</section>
 
-<footer>Reading Doc · browser TTS · private · no uploads</footer>
-<input type="file" id="file-input" accept=".html,.htm,.pdf" style="display:none"/>
+<!-- =============== LIMITS =============== -->
+<section class="lab" data-view="limits" hidden>
+  <div class="lab-head">
+    <div>
+      <p class="eyebrow">Exponentials · ε–δ limits · L'Hôpital</p>
+      <h2>What <em>approach</em> means</h2>
+      <p class="lede">Find the base whose growth rate equals its height. Then test the formal definition of a limit yourself, and see why a ratio of zeros is decided by the ratio of slopes.</p>
+    </div>
+    <div class="seg" id="l-mode"></div>
+  </div>
+  <div class="lab-body">
+    <div class="stage"><canvas id="cv-limits" aria-label="Exponentials and limits"></canvas><div class="hint" id="l-hint"></div></div>
+    <aside class="panel" id="pn-limits"></aside>
+  </div>
+  <div class="notes" id="l-notes"></div>
+</section>
+
+<!-- =============== TRANSFORM =============== -->
+<section class="lab" data-view="transform" hidden>
+  <div class="lab-head">
+    <div>
+      <p class="eyebrow">The derivative without a graph</p>
+      <h2>Derivative as <em>stretch</em></h2>
+      <p class="lede">Send every point on an input line to its output. Zoom into a neighbourhood: the derivative is the local stretch factor. Its size decides whether repeated application pulls points in or pushes them away.</p>
+    </div>
+    <div class="seg" id="t-mode"></div>
+  </div>
+  <div class="lab-body">
+    <div class="stage"><canvas id="cv-transform" aria-label="Number line transformation"></canvas><div class="hint" id="t-hint"></div></div>
+    <aside class="panel" id="pn-transform"></aside>
+  </div>
+  <div class="notes" id="t-notes"></div>
+</section>
+
+<!-- =============== SHEET =============== -->
+<section class="lab" data-view="sheet" hidden>
+  <div class="lab-head">
+    <div>
+      <p class="eyebrow">Every formula, with its picture</p>
+      <h2>Formula map</h2>
+      <p class="lede">The formulas still matter. Each card states one, gives the picture that produces it, and opens the visualiser where you can rebuild it.</p>
+    </div>
+  </div>
+  <div class="sheet" id="sheet"></div>
+</section>
+
+</main>
 
 <script>
-'use strict';
+/* ================= core ================= */
+const $=s=>document.querySelector(s);
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const K={};['bg','stage','panel','line','ink','dim','faint','blue','teal','green','yellow','red','gold','purple','grid','axis'].forEach(k=>K[k]=cssv('--'+k));
+const PI=Math.PI, E=Math.E;
+const fact=n=>{let r=1;for(let i=2;i<=n;i++)r*=i;return r};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+function fmt(v,d=3){if(v===undefined||v===null||!isFinite(v))return '—';const a=Math.abs(v);if(a!==0&&(a>=1e5||a<1e-4))return v.toExponential(2);let s=v.toFixed(d);if(/^-0\.0+$/.test(s))s=s.slice(1);return s}
+function hex(c){c=c.replace('#','');return[parseInt(c.slice(0,2),16),parseInt(c.slice(2,4),16),parseInt(c.slice(4,6),16)]}
+function mix(a,b,t){const A=hex(a),B=hex(b);return`rgb(${A.map((v,i)=>Math.round(lerp(v,B[i],t))).join(',')})`}
+function rgba(c,al){const A=hex(c);return`rgba(${A[0]},${A[1]},${A[2]},${al})`}
+function niceStep(raw){const p=Math.pow(10,Math.floor(Math.log10(raw)));const m=raw/p;return(m<1.5?1:m<3.5?2:m<7.5?5:10)*p}
+const FM=(s,it=true)=>`${it?'italic ':''}${s}px "STIX Two Text","Times New Roman",serif`;
+const FMONO=s=>`${s}px "IBM Plex Mono",ui-monospace,monospace`;
+const PLOTS=[];
 
-// ── Service Worker ─────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+class Plot{
+  constructor(cv){this.cv=cv;this.ctx=cv.getContext('2d');this.v={x0:-1,x1:1,y0:-1,y1:1};this.w=0;this.h=0;this.draw=null;
+    new ResizeObserver(()=>this.resize()).observe(cv);PLOTS.push(this)}
+  resize(){const r=this.cv.getBoundingClientRect();if(r.width<2)return;const d=Math.min(window.devicePixelRatio||1,2);
+    const ow=this.w,oh=this.h;this.w=r.width;this.h=r.height;this.cv.width=Math.round(this.w*d);this.cv.height=Math.round(this.h*d);
+    this.ctx.setTransform(d,0,0,d,0,0);if(this.onResize)this.onResize(ow,oh);this.render()}
+  render(){if(!this.w||!this.draw)return;const c=this.ctx;c.save();c.fillStyle=K.stage;c.fillRect(0,0,this.w,this.h);this.draw(c,this);c.restore()}
+  X(x){return(x-this.v.x0)/(this.v.x1-this.v.x0)*this.w}
+  Y(y){return this.h-(y-this.v.y0)/(this.v.y1-this.v.y0)*this.h}
+  ix(px){return this.v.x0+px/this.w*(this.v.x1-this.v.x0)}
+  iy(py){return this.v.y0+(this.h-py)/this.h*(this.v.y1-this.v.y0)}
+  setView(x0,x1,y0,y1,keepAspect){this.v={x0,x1,y0,y1}}
+  grid(){const c=this.ctx,v=this.v;if(!this.w)return;
+    const sx=niceStep((v.x1-v.x0)/(this.w/95)),sy=niceStep((v.y1-v.y0)/(this.h/70));
+    c.lineWidth=1;c.strokeStyle=K.grid;c.beginPath();
+    const ix0=Math.ceil(v.x0/sx),ix1=Math.floor(v.x1/sx),iy0=Math.ceil(v.y0/sy),iy1=Math.floor(v.y1/sy);
+    for(let i=ix0;i<=ix1;i++){const px=Math.round(this.X(i*sx))+.5;c.moveTo(px,0);c.lineTo(px,this.h)}
+    for(let i=iy0;i<=iy1;i++){const py=Math.round(this.Y(i*sy))+.5;c.moveTo(0,py);c.lineTo(this.w,py)}
+    c.stroke();
+    const ay=this.Y(0),ax=this.X(0);c.strokeStyle=K.axis;c.lineWidth=1.3;c.beginPath();
+    if(ay>=0&&ay<=this.h){c.moveTo(0,ay);c.lineTo(this.w,ay)} if(ax>=0&&ax<=this.w){c.moveTo(ax,0);c.lineTo(ax,this.h)} c.stroke();
+    c.fillStyle=K.faint;c.font=FMONO(10.5);
+    const dx=Math.max(0,-Math.floor(Math.log10(sx)+1e-9)),dy=Math.max(0,-Math.floor(Math.log10(sy)+1e-9));
+    c.textAlign='center';c.textBaseline='top';const ly=clamp(ay+5,4,this.h-16);
+    for(let i=ix0;i<=ix1;i++){if(i===0)continue;c.fillText((i*sx).toFixed(dx),this.X(i*sx),ly)}
+    c.textAlign='right';c.textBaseline='middle';const lx=clamp(ax-6,30,this.w-4);
+    for(let i=iy0;i<=iy1;i++){if(i===0)continue;const py=this.Y(i*sy);if(py<10||py>this.h-10)continue;c.fillText((i*sy).toFixed(dy),lx,py)}
+  }
+  curve(f,col,lw=2,o={}){const c=this.ctx,v=this.v;const a=Math.max(o.from??-Infinity,v.x0),b=Math.min(o.to??Infinity,v.x1);if(b<=a)return;
+    const step=(v.x1-v.x0)/this.w*0.6;c.beginPath();let pen=false,last=0;
+    for(let x=a;x<=b+step*0.5;x+=step){const xx=Math.min(x,b);const y=f(xx);if(!isFinite(y)||Math.abs(y)>1e7){pen=false;continue}
+      const px=this.X(xx),py=this.Y(y);if(pen&&Math.abs(py-last)>this.h*2.5)pen=false;
+      if(!pen){c.moveTo(px,py);pen=true}else c.lineTo(px,py);last=py}
+    c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(o.dash||[]);c.lineJoin='round';c.stroke();c.setLineDash([])}
 }
+function fitBox(p,x0,x1,y0,y1,o={}){const R=o.rect||{x:0,y:0,w:p.w,h:p.h},pad=o.pad??28;const W=R.w-2*pad,H=R.h-2*pad;
+  let sx=W/(x1-x0),sy=H/(y1-y0);if(o.equal!==false){const s=Math.min(sx,sy);sx=sy=s}
+  const ox=R.x+pad+(W-sx*(x1-x0))/2,oy=R.y+pad+(H-sy*(y1-y0))/2;
+  return{X:x=>ox+(x-x0)*sx,Y:y=>oy+(y1-y)*sy,sx,sy,ix:px=>x0+(px-ox)/sx,iy:py=>y1-(py-oy)/sy}}
+/* drawing helpers */
+function L(c,x1,y1,x2,y2,col,lw=2,dash){c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.strokeStyle=col;c.lineWidth=lw;c.setLineDash(dash||[]);c.stroke();c.setLineDash([])}
+function R(c,x1,y1,x2,y2,fill,stroke,lw=1.5){const x=Math.min(x1,x2),y=Math.min(y1,y2),w=Math.abs(x2-x1),h=Math.abs(y2-y1);if(fill){c.fillStyle=fill;c.fillRect(x,y,w,h)}if(stroke){c.strokeStyle=stroke;c.lineWidth=lw;c.strokeRect(x,y,w,h)}}
+function poly(c,pts,fill,stroke,lw=1.5){c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.strokeStyle=stroke;c.lineWidth=lw;c.stroke()}}
+function T(c,s,x,y,o={}){c.font=o.font||FM(o.size||16,o.it!==false);c.fillStyle=o.col||K.ink;c.textAlign=o.align||'center';c.textBaseline=o.base||'middle';
+  if(o.halo!==false){c.lineWidth=4;c.strokeStyle=K.stage;c.lineJoin='round';c.strokeText(s,x,y)}c.fillText(s,x,y)}
+function dot(c,x,y,r,col,ring){c.beginPath();c.arc(x,y,r,0,2*PI);c.fillStyle=col;c.fill();if(ring){c.lineWidth=2;c.strokeStyle=ring;c.stroke()}}
+function hole(c,x,y,r,col){c.beginPath();c.arc(x,y,r,0,2*PI);c.fillStyle=K.stage;c.fill();c.lineWidth=2;c.strokeStyle=col;c.stroke()}
+function arrow(c,x1,y1,x2,y2,col,lw=2){L(c,x1,y1,x2,y2,col,lw);const a=Math.atan2(y2-y1,x2-x1),s=Math.min(9,Math.hypot(x2-x1,y2-y1)*.5);
+  poly(c,[[x2,y2],[x2-s*Math.cos(a-.42),y2-s*Math.sin(a-.42)],[x2-s*Math.cos(a+.42),y2-s*Math.sin(a+.42)]],col)}
 
-// The neural voice's browser storage doesn't reliably work under file://,
-// only http(s) — warn up front instead of letting it silently fail later.
-const isFileProtocol = location.protocol === 'file:';
-if (isFileProtocol) document.getElementById('file-protocol-bar').style.display = 'flex';
+/* ui helpers */
+function h(tag,props={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(props)){if(k==='class')e.className=v;else if(k==='html')e.innerHTML=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v)}
+  for(const k of kids.flat()){if(k==null)continue;e.append(k.nodeType?k:document.createTextNode(k))}return e}
+function slider(parent,{id,label,min,max,step=0.01,value,log=false,f=v=>fmt(v,2)},on){
+  const out=h('output',{for:id});const inp=h('input',{type:'range',id,min:log?0:min,max:log?1000:max,step:log?1:step});
+  const toV=r=>log?min*Math.pow(max/min,r/1000):+r,toR=v=>log?Math.round(1000*Math.log(v/min)/Math.log(max/min)):v;
+  const api={set(v,silent){inp.value=toR(clamp(v,min,max));out.textContent=f(clamp(v,min,max));if(!silent)on(clamp(v,min,max))},get:()=>toV(+inp.value),row:null};
+  inp.addEventListener('input',()=>{const v=toV(+inp.value);out.textContent=f(v);on(v)});
+  api.row=h('div',{class:'ctl'},h('label',{for:id},h('span',{html:label}),out),inp);parent.append(api.row);api.set(value,true);return api}
+function toggle(parent,{id,label,checked,color},on){const inp=h('input',{type:'checkbox',id});inp.checked=!!checked;inp.addEventListener('change',()=>on(inp.checked));
+  parent.append(h('label',{class:'chip',for:id,style:`--c:${color}`},inp,h('i'),h('span',{html:label})));return inp}
+function segment(el,options,value,on){el.innerHTML='';const bs=options.map(([v,l])=>{const b=h('button',{type:'button','aria-pressed':String(v===value),html:l});
+  b.addEventListener('click',()=>{bs.forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');on(v)});el.append(b);return b});
+  return{select(v){options.forEach(([ov],i)=>bs[i].setAttribute('aria-pressed',String(ov===v)))}}}
+function readout(el,rows){el.innerHTML=rows.map(r=>`<dt class="${r[3]?'sep':''}">${r[0]}</dt><dd class="${r[2]||''} ${r[3]?'sep':''}">${r[1]}</dd>`).join('')}
+function group(parent,title){const g=h('div',{class:'group'});if(title)g.append(h('h3',{},title));parent.append(g);return g}
+function pointer(cv,H){let st=null;
+  const pos=e=>{const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+  cv.addEventListener('pointerdown',e=>{const[x,y]=pos(e);const t=H.down?H.down(x,y,e):null;if(t){st={t,x,y,lx:x,ly:y};cv.setPointerCapture(e.pointerId);e.preventDefault()}});
+  cv.addEventListener('pointermove',e=>{if(!st)return;const[x,y]=pos(e);H.move&&H.move(st.t,x,y,x-st.lx,y-st.ly,st);st.lx=x;st.ly=y});
+  const end=()=>{if(st&&H.up)H.up(st.t);st=null};cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  if(H.wheel)cv.addEventListener('wheel',e=>{const[x,y]=pos(e);e.preventDefault();H.wheel(x,y,e.deltaY)},{passive:false})}
+function tween(dur,fn,done){const t0=performance.now();const red=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const step=t=>{let k=red?1:Math.min(1,(t-t0)/dur);fn(k);if(k<1)requestAnimationFrame(step);else done&&done()};requestAnimationFrame(step)}
+const ease=k=>k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+function simpson(f,a,b,n=800){if(a===b)return 0;n+=n%2;const hh=(b-a)/n;let s=f(a)+f(b);for(let i=1;i<n;i++)s+=f(a+i*hh)*(i%2?4:2);return s*hh/3}
+const SETMODE={};
 
-// ── Elements ───────────────────────────────────────────────────
-const pasteArea   = document.getElementById('paste-area');
-const pasteStats  = document.getElementById('paste-stats');
-const btnClipboard= document.getElementById('btn-clipboard');
-const btnSaveDoc  = document.getElementById('btn-save-doc');
-const btnReadPaste= document.getElementById('btn-read-paste');
-const btnReadPage = document.getElementById('btn-read-page');
-const btnPlay     = document.getElementById('btn-play');
-const btnPause    = document.getElementById('btn-pause');
-const btnStop     = document.getElementById('btn-stop');
-const btnBack     = document.getElementById('btn-back');
-const docList     = document.getElementById('doc-list');
-const libCount    = document.getElementById('lib-count');
-const docFrame    = document.getElementById('doc-frame');
-const docReader   = document.getElementById('doc-reader');
-const libListView = document.getElementById('lib-list-view');
-const readerTitle = document.getElementById('reader-title');
-const voiceSel    = document.getElementById('voice-sel');
-const player      = document.getElementById('player');
-const pDot        = document.getElementById('p-dot');
-const pLabel      = document.getElementById('p-label');
-const pWord       = document.getElementById('p-word');
-const pFill       = document.getElementById('p-fill');
-const fileInput   = document.getElementById('file-input');
-const speedChips  = document.querySelectorAll('.sc');
-
-// ── State ──────────────────────────────────────────────────────
-const synth = window.speechSynthesis;
-let voices      = [];
-let utterance   = null;
-let isPlaying   = false;
-let isPaused    = false;
-let currentSpeed= 1;
-let activeDocId = null;
-let currentMode = 'paste';
-
-// Text Chunking State
-let speechChunks = [];
-let chunkIndex = 0;
-let totalTextLength = 0;
-let speakTimeout = null;
-
-// Kokoro (offline neural TTS) state
-let kokoroMod = null;
-let kokoroTTS = null;
-let kokoroAudio = null;
-let kokoroChunks = [];
-let kokoroChunkIndex = 0;
-let kokoroTotalLen = 0;
-let activeEngine = 'system';
-
-let library = [];
-try { library = JSON.parse(localStorage.getItem('rd-lib') || '[]'); } catch(e) {}
-function saveLib() { try { localStorage.setItem('rd-lib', JSON.stringify(library)); } catch(e) {} }
-
-// ── Tabs ───────────────────────────────────────────────────────
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
-  });
+/* ================= LAB 1: THE GRAPH ================= */
+(()=>{
+const FN={
+  sin:{l:'sin x',d:(n,x)=>[Math.sin(x),Math.cos(x),-Math.sin(x),-Math.cos(x)][n%4],view:[-1.2,7.6,-2.3,2.3],a:1.2,L:0},
+  sq:{l:'x²',d:(n,x)=>n===0?x*x:n===1?2*x:n===2?2:0,view:[-3,3.6,-2,8],a:1.5,L:0},
+  cub:{l:'x³ − 3x',d:(n,x)=>n===0?x**3-3*x:n===1?3*x*x-3:n===2?6*x:n===3?6:0,view:[-3,3,-5,5],a:1.4,L:-1},
+  vel:{l:'t(8 − t)',d:(n,x)=>n===0?x*(8-x):n===1?8-2*x:n===2?-2:0,view:[-1,9.6,-6,20],a:5,L:0},
+  exp:{l:'eˣ',d:(n,x)=>Math.exp(x),view:[-3.6,3,-1.5,9],a:1,L:0},
+  ln:{l:'ln x',d:(n,x)=>x<=0?NaN:n===0?Math.log(x):(n%2?1:-1)*fact(n-1)/Math.pow(x,n),view:[-0.6,6,-3,2.6],a:2,L:1,bad:(lo)=>lo<=0,min:0.02},
+  inv:{l:'1/x',d:(n,x)=>(n%2?-1:1)*fact(n)/Math.pow(x,n+1),view:[-4,4.6,-4,4.4],a:1.5,L:0.5,bad:(lo,hi)=>lo<=0&&hi>=0},
+  cos:{l:'cos x',d:(n,x)=>[Math.cos(x),-Math.sin(x),-Math.cos(x),Math.sin(x)][n%4],view:[-6.5,6.5,-2.3,2.3],a:0.8,L:0}
+};
+const G={fk:'sin',a:1.2,L:0,dx:0.9,dxi:0.3,smp:'left',n:3,show:{sec:true,tan:true,d1:true,d2:false,area:true,acc:false,avg:false,tay:false}};
+const p=new Plot($('#cv-graph'));
+const F=()=>FN[G.fk], f=x=>F().d(0,x);
+function fitView(){const v=F().view;p.v={x0:v[0],x1:v[1],y0:v[2],y1:v[3]};aspect()}
+function aspect(){/* keep y-range but nothing else; graphs are allowed non-equal scale */}
+fitView();
+const tay=x=>{let s=0;for(let k=0;k<=G.n;k++)s+=F().d(k,G.a)/fact(k)*Math.pow(x-G.a,k);return s};
+function areaInfo(){const lo=Math.min(G.L,G.a),hi=Math.max(G.L,G.a);const bad=F().bad?F().bad(lo,hi):false;
+  if(bad)return{bad:true};const n=Math.max(1,Math.min(3000,Math.round(Math.abs(G.a-G.L)/G.dxi)));const w=(G.a-G.L)/n;let sum=0;const rects=[];
+  for(let i=0;i<n;i++){const xl=G.L+i*w;const xs=G.smp==='left'?xl:G.smp==='mid'?xl+w/2:xl+w;const y=f(xs);if(isFinite(y)){sum+=y*w;rects.push([xl,xl+w,y])}}
+  const I=simpson(f,G.L,G.a,1200);return{n,w,sum,I,rects,avg:G.a!==G.L?I/(G.a-G.L):f(G.a)}}
+function accCurve(){const v=p.v,lo=Math.min(G.L,v.x0),hi=Math.max(G.L,v.x1),N=700,hs=(hi-lo)/N;const pts=[];
+  const bad=x=>{const y=f(x);return!isFinite(y)||Math.abs(y)>1e6};
+  for(const dir of[1,-1]){let x=G.L,A=0;const arr=[[x,0]];const lim=dir>0?hi:lo;
+    while((dir>0?x<lim:x>lim)){const nx=x+dir*hs;const fa=f(x),fb=f(nx);if(bad(x)||bad(nx))break;A+=dir*(fa+fb)/2*hs;x=nx;arr.push([x,A])}
+    if(dir>0)pts.push(arr);else pts.push(arr.reverse())}
+  return pts}
+p.draw=(c)=>{const Fn=F(),a=G.a,fa=f(a);p.grid();const ai=areaInfo();
+  // area rectangles
+  if(G.show.area&&!ai.bad){const n=ai.rects.length;ai.rects.forEach((r,i)=>{const t=n>1?i/(n-1):0;const col=mix(K.blue,K.green,t);const y0=p.Y(0),y1=p.Y(r[2]);
+      const x0=p.X(r[0]),x1=p.X(r[1]);c.fillStyle=r[2]>=0?col:mix(K.red,K.gold,t*.5);c.globalAlpha=.42;c.fillRect(Math.min(x0,x1),Math.min(y0,y1),Math.abs(x1-x0),Math.abs(y1-y0));c.globalAlpha=1;
+      if(Math.abs(x1-x0)>3){c.strokeStyle=rgba('#000000',.55);c.lineWidth=1;c.strokeRect(Math.min(x0,x1),Math.min(y0,y1),Math.abs(x1-x0),Math.abs(y1-y0))}})}
+  // accumulation
+  let accPts=null;if(G.show.acc&&!ai.bad){accPts=accCurve();accPts.forEach(arr=>{c.beginPath();arr.forEach(([x,A],i)=>{const px=p.X(x),py=p.Y(A);i?c.lineTo(px,py):c.moveTo(px,py)});c.strokeStyle=K.purple;c.lineWidth=2.4;c.stroke()});
+    const Aa=simpson(f,G.L,a,800);const sl=fa;const k=(p.v.x1-p.v.x0)*.08;
+    L(c,p.X(a-k),p.Y(Aa-sl*k),p.X(a+k),p.Y(Aa+sl*k),K.purple,1.5,[4,3]);dot(c,p.X(a),p.Y(Aa),4.5,K.purple);
+    T(c,'A(x)',p.X(a)+10,p.Y(Aa)-14,{col:K.purple,align:'left',size:15});
+    if(G.show.avg){L(c,p.X(G.L),p.Y(0),p.X(a),p.Y(Aa),K.teal,1.6,[2,3])}}
+  if(G.show.d2)p.curve(x=>Fn.d(2,x),K.red,1.6,{dash:[6,4]});
+  if(G.show.d1)p.curve(x=>Fn.d(1,x),K.green,2);
+  p.curve(f,K.blue,3.2);
+  if(G.show.tay)p.curve(tay,K.gold,2.2);
+  if(G.show.avg&&!ai.bad&&G.a!==G.L){const y=p.Y(ai.avg);L(c,p.X(G.L),y,p.X(a),y,K.teal,2.2,[7,4]);T(c,'avg = '+fmt(ai.avg,3),p.X((G.L+a)/2),y-12,{col:K.teal,size:14,font:FMONO(12)})}
+  // secant
+  const x2=a+G.dx,f2=f(x2);
+  if(G.show.sec&&isFinite(f2)){const s=(f2-fa)/G.dx;const span=(p.v.x1-p.v.x0);const xl=a-span,xr=a+span;
+    L(c,p.X(xl),p.Y(fa+s*(xl-a)),p.X(xr),p.Y(fa+s*(xr-a)),rgba(K.yellow,.8),1.6);
+    L(c,p.X(a),p.Y(fa),p.X(x2),p.Y(fa),K.yellow,2.4);L(c,p.X(x2),p.Y(fa),p.X(x2),p.Y(f2),K.green,2.4);
+    const lx=p.X((a+x2)/2),ly=p.Y(fa);if(Math.abs(p.X(x2)-p.X(a))>18)T(c,'dx',lx,ly+(f2>=fa?14:-14),{col:K.yellow,size:15});
+    if(Math.abs(p.Y(f2)-p.Y(fa))>16)T(c,'df',p.X(x2)+(G.dx>0?16:-16),p.Y((fa+f2)/2),{col:K.green,size:15});
+    dot(c,p.X(x2),p.Y(f2),4,K.yellow)}
+  if(G.show.tan){const s=Fn.d(1,a);const span=(p.v.x1-p.v.x0);L(c,p.X(a-span),p.Y(fa-s*span),p.X(a+span),p.Y(fa+s*span),rgba(K.ink,.85),1.5)}
+  // L handle
+  const yL=clamp(p.Y(0),10,p.h-10),xL=p.X(G.L);poly(c,[[xL,yL],[xL-7,yL+12],[xL+7,yL+12]],K.purple);T(c,'L',xL,yL+22,{col:K.purple,size:15});
+  // a marker
+  if(isFinite(fa)){L(c,p.X(a),p.Y(fa),p.X(a),clamp(p.Y(0),0,p.h),rgba(K.ink,.35),1,[2,4]);dot(c,p.X(a),p.Y(fa),7,K.ink,K.blue);T(c,'a',p.X(a)-12,p.Y(fa)-14,{size:16})}
+  T(c,'f(x) = '+Fn.l,14,20,{align:'left',col:K.blue,size:17,it:true})
+};
+const pn=$('#pn-graph');
+const gDx=group(pn,'Nudge');
+const sDx=slider(gDx,{id:'g-dx',label:'dx',min:0.001,max:2.5,value:G.dx,log:true,f:v=>fmt(v,v<0.01?4:3)},v=>{G.dx=v;up()});
+gDx.append(h('div',{class:'row-btns'},h('button',{class:'btn primary',type:'button',onclick:()=>{const s=G.dx;tween(2200,k=>{sDx.set(Math.exp(lerp(Math.log(Math.max(s,1.2)),Math.log(0.001),ease(k)))) })}},'Shrink dx → 0'),
+  h('button',{class:'btn',type:'button',onclick:()=>sDx.set(1)},'dx = 1')));
+const gL=group(pn,'Layers');const chips=h('div',{class:'chips'});gL.append(chips);
+[['sec','secant',K.yellow],['tan','tangent',K.ink],['d1','f′',K.green],['d2','f″',K.red],['area','Σ f·dx',K.blue],['acc','A(x)',K.purple],['avg','average',K.teal],['tay','Taylor Pₙ',K.gold]]
+  .forEach(([k,l,col])=>toggle(chips,{id:'g-'+k,label:l,checked:G.show[k],color:col},v=>{G.show[k]=v;up()}));
+const gI=group(pn,'Integral & Taylor');
+slider(gI,{id:'g-dxi',label:'rectangle width dx',min:0.01,max:1.5,value:G.dxi,log:true,f:v=>fmt(v,3)},v=>{G.dxi=v;up()});
+const smp=h('div',{class:'seg'});gI.append(smp);segment(smp,[['left','left'],['mid','midpoint'],['right','right']],G.smp,v=>{G.smp=v;up()});
+slider(gI,{id:'g-n',label:'Taylor order n',min:0,max:12,step:1,value:G.n,f:v=>String(v)},v=>{G.n=v;up()});
+const ro=h('dl',{class:'read'});pn.append(ro);
+function up(){const Fn=F(),a=G.a,fa=f(a),f1=Fn.d(1,a),f2v=Fn.d(2,a);const sec=(f(a+G.dx)-fa)/G.dx;const ai=areaInfo();
+  const bend=Math.abs(f2v)<1e-9?'flat':f2v>0?'bends up':'bends down';
+  const rows=[['f(a)',fmt(fa),'b'],['secant  df/dx',fmt(sec,4),'y'],['tangent  f′(a)',fmt(f1,4),'g'],['secant − tangent',fmt(sec-f1,4),''],
+    ['f″(a)',fmt(f2v)+' · '+bend,'r']];
+  if(ai.bad)rows.push(['∫ from L to a','crosses an asymptote','r',1]);
+  else rows.push([`Σ f(xᵢ)·dx  (${ai.n} rects)`,fmt(ai.sum,4),'b',1],[`∫<sub>L</sub><sup>a</sup> f dx`,fmt(ai.I,4),'p'],['Σ − ∫',fmt(ai.sum-ai.I,4),''],['average on [L, a]',fmt(ai.avg,4),'t']);
+  rows.push([`P<sub>${G.n}</sub>(a + 1)`,fmt(tay(a+1),4),'o',1],['f(a + 1)',fmt(f(a+1),4),'b']);
+  readout(ro,rows);p.render()}
+const fnSeg=segment($('#g-fn'),Object.entries(FN).map(([k,o])=>[k,o.l]),G.fk,k=>{G.fk=k;G.a=FN[k].a;G.L=FN[k].L;fitView();up()});
+// interaction
+pointer(p.cv,{
+  down(x,y){const fa=f(G.a);if(isFinite(fa)&&Math.hypot(x-p.X(G.a),y-p.Y(fa))<20)return'a';
+    const yL=clamp(p.Y(0),10,p.h-10);if(Math.hypot(x-p.X(G.L),y-(yL+8))<18)return'L';if(Math.abs(x-p.X(G.a))<10)return'a';return'pan'},
+  move(t,x,y,dx,dy){if(t==='a'){let v=p.ix(x);if(F().min!=null)v=Math.max(F().min,v);G.a=v}else if(t==='L'){let v=p.ix(x);if(F().min!=null)v=Math.max(F().min,v);G.L=v}
+    else{const sx=(p.v.x1-p.v.x0)/p.w,sy=(p.v.y1-p.v.y0)/p.h;p.v.x0-=dx*sx;p.v.x1-=dx*sx;p.v.y0+=dy*sy;p.v.y1+=dy*sy}up()},
+  wheel(x,y,d){zoomAt(p.ix(x),p.iy(y),Math.pow(1.0015,d))}
 });
+function zoomAt(cx,cy,k){const v=p.v;p.v={x0:cx+(v.x0-cx)*k,x1:cx+(v.x1-cx)*k,y0:cy+(v.y0-cy)*k,y1:cy+(v.y1-cy)*k};p.render()}
+function animView(target){const s={...p.v};tween(600,k=>{const e=ease(k);p.v={x0:lerp(s.x0,target.x0,e),x1:lerp(s.x1,target.x1,e),y0:lerp(s.y0,target.y0,e),y1:lerp(s.y1,target.y1,e)};p.render()})}
+$('#g-zoomA').onclick=()=>{const v=p.v,cx=G.a,cy=f(G.a),k=.3;animView({x0:cx-(v.x1-v.x0)/2*k,x1:cx+(v.x1-v.x0)/2*k,y0:cy-(v.y1-v.y0)/2*k,y1:cy+(v.y1-v.y0)/2*k})};
+$('#g-zin').onclick=()=>{const v=p.v;zoomAt((v.x0+v.x1)/2,(v.y0+v.y1)/2,.7)};
+$('#g-zout').onclick=()=>{const v=p.v;zoomAt((v.x0+v.x1)/2,(v.y0+v.y1)/2,1/.7)};
+$('#g-reset').onclick=()=>{const v=F().view;animView({x0:v[0],x1:v[1],y0:v[2],y1:v[3]})};
+SETMODE.graph=(k)=>{if(FN[k]){fnSeg.select(k);G.fk=k;G.a=FN[k].a;G.L=FN[k].L;fitView()}up()};
+up();
+})();
 
-// ── Voices ─────────────────────────────────────────────────────
-const KOKORO_MODEL_ID = 'onnx-community/Kokoro-82M-ONNX';
-const KOKORO_VOICE_PREFIX = 'kokoro:';
-const KOKORO_VOICES = [
-  { id: 'af_bella',    label: 'Bella — US Female' },
-  { id: 'af_nicole',   label: 'Nicole — US Female' },
-  { id: 'af_sarah',    label: 'Sarah — US Female' },
-  { id: 'af_sky',      label: 'Sky — US Female' },
-  { id: 'am_adam',     label: 'Adam — US Male' },
-  { id: 'am_michael',  label: 'Michael — US Male' },
-  { id: 'bf_emma',     label: 'Emma — UK Female' },
-  { id: 'bf_isabella', label: 'Isabella — UK Female' },
-  { id: 'bm_george',   label: 'George — UK Male' },
-  { id: 'bm_lewis',    label: 'Lewis — UK Male' },
+/* ================= LAB 2: NUDGE GEOMETRY ================= */
+(()=>{
+const N={mode:'rings',x:2,dx:0.35,cx:2,cdx:0.3,px:1.2,pdx:0.25,ux:1.4,udx:0.3,th:0.9,dth:0.3,dr:0.3,rs:1.8};
+const p=new Plot($('#cv-nudge'));const pn=$('#pn-nudge');
+const modeSeg=h('div');
+const groups={};const ro=h('dl',{class:'read'});
+function mk(k){groups[k]=h('div',{class:'group'});pn.append(groups[k]);return groups[k]}
+let g=mk('rings');slider(g,{id:'n-dr',label:'ring thickness dr',min:0.02,max:1,value:N.dr,log:true,f:v=>fmt(v,3)},v=>{N.dr=v;up()});
+slider(g,{id:'n-rs',label:'highlight ring at r',min:0,max:2.99,value:N.rs},v=>{N.rs=v;up()});
+g=mk('square');slider(g,{id:'n-x',label:'side x',min:0.5,max:3.2,value:N.x},v=>{N.x=v;up()});slider(g,{id:'n-dx',label:'nudge dx',min:0.005,max:1,value:N.dx,log:true,f:v=>fmt(v,3)},v=>{N.dx=v;up()});
+g=mk('cube');slider(g,{id:'n-cx',label:'side x',min:0.5,max:3,value:N.cx},v=>{N.cx=v;up()});slider(g,{id:'n-cdx',label:'nudge dx',min:0.01,max:1,value:N.cdx,log:true,f:v=>fmt(v,3)},v=>{N.cdx=v;up()});
+g=mk('puddle');slider(g,{id:'n-ux',label:'width x',min:0.45,max:3.6,value:N.ux},v=>{N.ux=v;up()});slider(g,{id:'n-udx',label:'nudge dx',min:0.005,max:1,value:N.udx,log:true,f:v=>fmt(v,3)},v=>{N.udx=v;up()});
+g=mk('sine');slider(g,{id:'n-th',label:'θ (arc length)',min:0,max:2*PI,value:N.th},v=>{N.th=v;up()});slider(g,{id:'n-dth',label:'nudge dθ',min:0.005,max:0.8,value:N.dth,log:true,f:v=>fmt(v,3)},v=>{N.dth=v;up()});
+g=mk('product');slider(g,{id:'n-px',label:'x',min:0.2,max:2.9,value:N.px},v=>{N.px=v;up()});slider(g,{id:'n-pdx',label:'nudge dx',min:0.005,max:0.6,value:N.pdx,log:true,f:v=>fmt(v,3)},v=>{N.pdx=v;up()});
+pn.append(ro);
+const NOTES={
+ rings:[['The picture',[`Slice the disc into rings of thickness <span class="m">dr</span>. Unroll one ring: it is almost a rectangle of width <span class="m">2πr</span> and height <span class="m">dr</span>.`,`Stand all those rectangles side by side on the <span class="m">r</span>-axis. Their tops trace the line <span class="m">y = 2πr</span>, and their combined area approaches the triangle under it: ½ · R · 2πR = <span class="m">πR²</span>.`,`The approximation is wrong for every finite <span class="m">dr</span>, and it gets less wrong as <span class="m">dr</span> shrinks. That limit of sums is the integral <span class="m">∫₀ᴿ 2πr dr</span>.`]],
+  ['Try',[`Drag <span class="m">dr</span> from 1 down to 0.02 and watch the error column shrink roughly in proportion to <span class="m">dr</span>.`,`Move the highlighted ring outward. Its rectangle gets taller, because circumference grows with <span class="m">r</span>.`,`Ask: why does the triangle's area equal the circle's? The answer is the first glimpse of "area under a graph" solving a non-graph problem.`]]],
+ square:[['The picture',[`Grow the side from <span class="m">x</span> to <span class="m">x + dx</span>. New area = two strips <span class="m">x·dx</span> + one corner <span class="m">dx²</span>.`,`Divide by <span class="m">dx</span>: <span class="m">2x + dx</span>. As <span class="m">dx → 0</span> the corner's share dies, leaving <span class="m">d(x²)/dx = 2x</span>.`,`Rule of thumb from this: a tiny change squared is a negligible change.`]],['Try',[`Shrink <span class="m">dx</span> and watch "corner share" fall towards 0%.`,`Set <span class="m">x = 3</span>: the rate of area growth per unit of side is 6.`]]],
+ cube:[['The picture',[`Grow a cube of side <span class="m">x</span>. Almost all new volume sits in three square slabs, each <span class="m">x²·dx</span>.`,`The edge rods (<span class="m">3x·dx²</span>) and the corner (<span class="m">dx³</span>) carry higher powers of <span class="m">dx</span> and vanish after dividing by <span class="m">dx</span>. So <span class="m">d(x³)/dx = 3x²</span>.`,`General power rule: expanding <span class="m">(x+dx)ⁿ</span>, there are <span class="m">n</span> ways to pick a single <span class="m">dx</span>, giving <span class="m">n·xⁿ⁻¹·dx</span>. Everything else has <span class="m">dx²</span> or more.`]],['Try',[`Push <span class="m">dx</span> large: the gold rods and red corner are visible. Shrink it: the three blue-green slabs carry nearly 100%.`]]],
+ puddle:[['The picture',[`A puddle of area 1 with width <span class="m">x</span> must have height <span class="m">1/x</span>. Its top-right corner traces the graph of <span class="m">1/x</span>.`,`Widen by <span class="m">dx</span>: you gain a strip ≈ <span class="m">(1/x)·dx</span> on the right. The area must stay 1, so the top loses a strip <span class="m">x·d(1/x)</span> of the same size.`,`Setting gain = loss: <span class="m">d(1/x)/dx = −1/x²</span>, matching the power rule on <span class="m">x⁻¹</span>.`]],['Try',[`Pause and predict the ratio at <span class="m">x = 2</span> before reading it off (it should be −0.25).`,`Challenge from the video: build a similar picture for <span class="m">√x</span> (a square of area <span class="m">x</span>).`]]],
+ sine:[['The picture',[`Walk an arc of length <span class="m">θ</span> round the unit circle. <span class="m">sin θ</span> is your height.`,`Take a tiny step <span class="m">dθ</span>. Zoomed in, the arc is a straight hypotenuse, and the small triangle is similar to the big one with angle <span class="m">θ</span>.`,`So the height change is adjacent/hypotenuse of that angle: <span class="m">d(sin θ) = cos θ · dθ</span>. The horizontal leg gives <span class="m">d(cos θ) = −sin θ · dθ</span>.`]],['Try',[`Drag the point on the circle. Near the top (θ ≈ π/2) the step is almost horizontal and <span class="m">d(sin θ)</span> ≈ 0.`,`Between π/2 and π the green leg points down: the derivative is negative.`]]],
+ product:[['The picture',[`Make <span class="m">sin x</span> the width and <span class="m">x²</span> the height of an adjustable box. Its area is the product.`,`A nudge adds a bottom-to-top strip <span class="m">x²·d(sin x)</span> on the right and a strip <span class="m">sin x·d(x²)</span> on top. The corner is <span class="m">dx²</span>-sized: ignore it.`,`"Left d-right plus right d-left": <span class="m">d(gh) = g·dh + h·dg</span>.`]],['Try',[`Move <span class="m">x</span> past π/2 ≈ 1.57. The width starts shrinking (red strip), so that term subtracts.`,`Compare to the sum rule: for a sum, nudges simply stack; for a product they create area.`]]]
+};
+const MODES=[['rings','Circle rings'],['square','x²'],['cube','x³'],['puddle','1/x'],['sine','sin θ'],['product','Product']];
+const ms=segment($('#n-mode'),MODES,N.mode,m=>{setMode(m)});
+function setMode(m){N.mode=m;ms.select(m);Object.entries(groups).forEach(([k,e])=>e.hidden=k!==m);
+  $('#n-notes').innerHTML=NOTES[m].map(([t,l])=>`<div class="note"><h4>${t}</h4><ul>${l.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('');
+  $('#n-hint').textContent=m==='sine'?'drag the point around the circle':'';p.cv.style.cursor=m==='sine'?'grab':'default';up()}
+SETMODE.nudge=m=>{if(m)setMode(m);else up()};
+let BOX=null;
+function drawRings(c){const wide=p.w>=620;const r1=wide?{x:0,y:0,w:p.w*.46,h:p.h}:{x:0,y:0,w:p.w,h:p.h*.5},r2=wide?{x:p.w*.46,y:0,w:p.w*.54,h:p.h}:{x:0,y:p.h*.5,w:p.w,h:p.h*.5};
+  const Rr=3,B=fitBox(p,-3.3,3.3,-3.3,3.3,{rect:r1,pad:22});const n=Math.ceil(Rr/N.dr-1e-9);const sel=Math.min(n-1,Math.floor(N.rs/N.dr));
+  for(let i=n-1;i>=0;i--){const r0=i*N.dr,ro=Math.min(Rr,r0+N.dr);const t=n>1?i/(n-1):0;c.beginPath();c.arc(B.X(0),B.Y(0),ro*B.sx,0,2*PI);c.arc(B.X(0),B.Y(0),r0*B.sx,0,2*PI,true);
+    c.fillStyle=i===sel?K.yellow:mix(K.blue,K.green,t);c.globalAlpha=i===sel?.9:.55;c.fill();c.globalAlpha=1;c.strokeStyle=rgba('#000000',.5);c.lineWidth=1;c.stroke()}
+  L(c,B.X(0),B.Y(0),B.X(Rr),B.Y(0),K.ink,1.4);T(c,'R = 3',B.X(1.5),B.Y(0)-12,{size:15});
+  const rsel=sel*N.dr;T(c,`ring at r = ${fmt(rsel,2)}`,B.X(0),B.Y(-3.15),{col:K.yellow,size:14,font:FMONO(12)});
+  const G2=fitBox(p,-0.35,3.6,-2,20.5,{rect:r2,equal:false,pad:28});
+  c.strokeStyle=K.axis;c.lineWidth=1.2;c.beginPath();c.moveTo(G2.X(0),G2.Y(-1));c.lineTo(G2.X(0),G2.Y(20));c.moveTo(G2.X(-0.2),G2.Y(0));c.lineTo(G2.X(3.4),G2.Y(0));c.stroke();
+  for(let i=0;i<n;i++){const r0=i*N.dr,w=Math.min(N.dr,Rr-r0);const hgt=2*PI*r0;const t=n>1?i/(n-1):0;c.fillStyle=i===sel?K.yellow:mix(K.blue,K.green,t);c.globalAlpha=i===sel?.9:.55;c.fillRect(G2.X(r0),G2.Y(hgt),G2.X(r0+w)-G2.X(r0),G2.Y(0)-G2.Y(hgt));c.globalAlpha=1;
+    if(G2.X(r0+w)-G2.X(r0)>3){c.strokeStyle=rgba('#000000',.5);c.lineWidth=1;c.strokeRect(G2.X(r0),G2.Y(hgt),G2.X(r0+w)-G2.X(r0),G2.Y(0)-G2.Y(hgt))}}
+  L(c,G2.X(0),G2.Y(0),G2.X(3.3),G2.Y(2*PI*3.3),K.ink,1.6);poly(c,[[G2.X(0),G2.Y(0)],[G2.X(3),G2.Y(0)],[G2.X(3),G2.Y(6*PI)]],null,rgba(K.ink,.7),1.2);
+  T(c,'y = 2πr',G2.X(2.4),G2.Y(2*PI*2.4)-16,{size:16,align:'right'});
+  [1,2,3].forEach(v=>T(c,String(v),G2.X(v),G2.Y(0)+12,{font:FMONO(11),col:K.dim}));[5,10,15].forEach(v=>T(c,String(v),G2.X(0)-8,G2.Y(v),{font:FMONO(11),col:K.dim,align:'right'}));
+  T(c,'r',G2.X(3.5),G2.Y(0)+12,{size:16});
+  let S=0;for(let i=0;i<n;i++){const r0=i*N.dr;S+=2*PI*r0*Math.min(N.dr,Rr-r0)}
+  return[[`rings`,String(n)],['dr',fmt(N.dr,3),'y'],['selected ring  2πr·dr',fmt(2*PI*rsel*N.dr,4),'y'],['Σ 2πr·dr',fmt(S,4),'b',1],['πR²  (exact)',fmt(9*PI,4),'g'],['error',fmt(9*PI-S,4),'r']]}
+function drawSquare(c){const x=N.x,d=N.dx;const B=fitBox(p,-0.7,4.6,-0.7,4.6);
+  R(c,B.X(0),B.Y(0),B.X(x),B.Y(x),rgba(K.blue,.35),K.blue,2);
+  R(c,B.X(x),B.Y(0),B.X(x+d),B.Y(x),rgba(K.green,.55),K.green,1.5);R(c,B.X(0),B.Y(x),B.X(x),B.Y(x+d),rgba(K.green,.55),K.green,1.5);
+  R(c,B.X(x),B.Y(x),B.X(x+d),B.Y(x+d),rgba(K.yellow,.85),K.yellow,1.5);
+  T(c,'x',B.X(x/2),B.Y(0)+16,{size:18});T(c,'x',B.X(0)-14,B.Y(x/2),{size:18});
+  if(d*B.sx>14){T(c,'dx',B.X(x+d/2),B.Y(0)+16,{col:K.yellow,size:16});T(c,'dx',B.X(0)-16,B.Y(x+d/2),{col:K.yellow,size:16})}
+  T(c,'x²',B.X(x/2),B.Y(x/2),{size:28});if(d*B.sx>22){T(c,'x·dx',B.X(x+d/2),B.Y(x/2),{col:K.green,size:14});T(c,'x·dx',B.X(x/2),B.Y(x+d/2),{col:K.green,size:14})}
+  T(c,'dx²',B.X(x+d)+8,B.Y(x+d)-10,{col:K.yellow,size:14,align:'left'});
+  const df=(x+d)**2-x*x;return[['x',fmt(x,3)],['dx',fmt(d,4),'y'],['d(x²) exact',fmt(df,5),'b',1],['strips  2x·dx',fmt(2*x*d,5),'g'],['corner  dx²',fmt(d*d,5),'y'],['corner share',fmt(100*d*d/df,2)+' %',''],['d(x²) / dx',fmt(df/d,4),'b',1],['2x',fmt(2*x,4),'g']]}
+function drawCube(c){const x=N.cx,d=N.cdx;const cs=.866;const pr=(X,Y,Z)=>[(X-Y)*cs,(X+Y)*.5-Z];const M=4.2;
+  const B=fitBox(p,-M*cs,M*cs,-M,M*1.05);const P=(X,Y,Z)=>{const[u,v]=pr(X,Y,Z);return[B.X(u),B.Y(-v)]};
+  const box=(x0,y0,z0,x1,y1,z1,col)=>{const top=[P(x0,y0,z1),P(x1,y0,z1),P(x1,y1,z1),P(x0,y1,z1)],fx=[P(x1,y0,z0),P(x1,y1,z0),P(x1,y1,z1),P(x1,y0,z1)],fy=[P(x0,y1,z0),P(x1,y1,z0),P(x1,y1,z1),P(x0,y1,z1)];
+    poly(c,fx,mix(col,'#000000',.35),rgba('#000000',.6),1);poly(c,fy,mix(col,'#000000',.55),rgba('#000000',.6),1);poly(c,top,mix(col,'#ffffff',.05),rgba('#000000',.6),1)};
+  const bx=[[0,0,0,x,x,x,K.blue],[x,0,0,x+d,x,x,K.teal],[0,x,0,x,x+d,x,K.teal],[0,0,x,x,x,x+d,K.green],
+    [x,x,0,x+d,x+d,x,K.gold],[x,0,x,x+d,x,x+d,K.gold],[0,x,x,x,x+d,x+d,K.gold],[x,x,x,x+d,x+d,x+d,K.red]];
+  bx.sort((a,b)=>(a[0]+a[1]+a[2])-(b[0]+b[1]+b[2])).forEach(b=>box(...b));
+  const q=P(x/2,0,0);T(c,'x',q[0]-10,q[1]+14,{size:18});
+  const dv=(x+d)**3-x**3;return[['x',fmt(x,3)],['dx',fmt(d,4),'y'],['d(x³) exact',fmt(dv,5),'b',1],['3 slabs  3x²·dx',fmt(3*x*x*d,5),'t'],['3 rods  3x·dx²',fmt(3*x*d*d,5),'o'],['corner  dx³',fmt(d**3,5),'r'],['slab share',fmt(100*3*x*x*d/dv,2)+' %',''],['d(x³) / dx',fmt(dv/d,4),'b',1],['3x²',fmt(3*x*x,4),'g']]}
+function drawPuddle(c){const x=N.ux,d=N.udx,h0=1/x,h1=1/(x+d);const B=fitBox(p,-0.5,4.6,-0.4,3.4);
+  c.strokeStyle=K.axis;c.lineWidth=1.2;c.beginPath();c.moveTo(B.X(-0.3),B.Y(0));c.lineTo(B.X(4.5),B.Y(0));c.moveTo(B.X(0),B.Y(-0.3));c.lineTo(B.X(0),B.Y(3.3));c.stroke();
+  c.beginPath();for(let t=0.29;t<=4.5;t+=0.01){const X=B.X(t),Y=B.Y(1/t);t===0.29?c.moveTo(X,Y):c.lineTo(X,Y)}c.strokeStyle=rgba(K.ink,.4);c.setLineDash([4,4]);c.lineWidth=1.3;c.stroke();c.setLineDash([]);
+  R(c,B.X(0),B.Y(0),B.X(x),B.Y(h1),rgba(K.blue,.4),null);
+  R(c,B.X(0),B.Y(h1),B.X(x),B.Y(h0),rgba(K.red,.55),K.red,1.4);R(c,B.X(x),B.Y(0),B.X(x+d),B.Y(h1),rgba(K.green,.6),K.green,1.4);
+  R(c,B.X(0),B.Y(0),B.X(x),B.Y(h0),null,K.blue,2);
+  T(c,'area = 1',B.X(x/2),B.Y(h1/2),{size:17});T(c,'x',B.X(x/2),B.Y(0)+16,{size:18});T(c,'1/x',B.X(0)-18,B.Y(h0/2),{size:16,align:'right'});
+  T(c,'gain ≈ (1/x)·dx',B.X(x+d)+8,B.Y(h1/2),{col:K.green,size:14,align:'left'});T(c,'loss = x·d(1/x)',B.X(x/2),B.Y(h0)-14,{col:K.red,size:14});
+  const dh=h1-h0;return[['x',fmt(x,3)],['dx',fmt(d,4),'y'],['area gained',fmt(d*h1,5),'g',1],['area lost',fmt(-x*dh,5),'r'],['d(1/x)',fmt(dh,5),'r',1],['d(1/x) / dx',fmt(dh/d,4),'b'],['−1/x²',fmt(-1/(x*x),4),'g']]}
+function drawSine(c){const th=N.th,d=N.dth;const B=fitBox(p,-1.45,1.45,-1.35,1.35);BOX=B;
+  c.strokeStyle=K.axis;c.lineWidth=1.2;c.beginPath();c.moveTo(B.X(-1.4),B.Y(0));c.lineTo(B.X(1.4),B.Y(0));c.moveTo(B.X(0),B.Y(-1.3));c.lineTo(B.X(0),B.Y(1.3));c.stroke();
+  c.beginPath();c.arc(B.X(0),B.Y(0),B.sx,0,2*PI);c.strokeStyle=rgba(K.ink,.55);c.lineWidth=1.5;c.stroke();
+  c.beginPath();c.arc(B.X(0),B.Y(0),B.sx,-0,-th,true);c.strokeStyle=K.blue;c.lineWidth=3;c.stroke();
+  c.beginPath();c.arc(B.X(0),B.Y(0),B.sx,-th,-(th+d),true);c.strokeStyle=K.yellow;c.lineWidth=4;c.stroke();
+  const Px=Math.cos(th),Py=Math.sin(th),Qx=Math.cos(th+d),Qy=Math.sin(th+d);
+  L(c,B.X(0),B.Y(0),B.X(Px),B.Y(Py),rgba(K.ink,.8),1.5);L(c,B.X(Px),B.Y(0),B.X(Px),B.Y(Py),K.teal,2.5);
+  L(c,B.X(Px),B.Y(Py),B.X(Qx),B.Y(Py),K.red,2.5);L(c,B.X(Qx),B.Y(Py),B.X(Qx),B.Y(Qy),K.green,2.5);
+  c.beginPath();c.arc(B.X(0),B.Y(0),26,0,-th,th>0);c.strokeStyle=K.ink;c.lineWidth=1;c.stroke();T(c,'θ',B.X(0)+38*Math.cos(th/2),B.Y(0)-38*Math.sin(th/2),{size:16});
+  T(c,'sin θ',B.X(Px)+(Px>=0?-8:8),B.Y(Py/2),{col:K.teal,size:15,align:Px>=0?'right':'left'});
+  T(c,'d(sin θ)',B.X(Qx)+(Qx>=Px?10:-10),B.Y((Py+Qy)/2),{col:K.green,size:14,align:Qx>=Px?'left':'right'});
+  T(c,'d(cos θ)',B.X((Px+Qx)/2),B.Y(Py)+(Qy>=Py?14:-14),{col:K.red,size:14});
+  const mx=Math.cos(th+d/2)*1.13,my=Math.sin(th+d/2)*1.13;T(c,'dθ',B.X(mx),B.Y(my),{col:K.yellow,size:15});
+  dot(c,B.X(Px),B.Y(Py),7,K.ink,K.blue);
+  const ds=Qy-Py,dc=Qx-Px;return[['θ',fmt(th,3)],['dθ',fmt(d,4),'y'],['d(sin θ) / dθ',fmt(ds/d,4),'g',1],['cos θ',fmt(Math.cos(th),4),'t'],['d(cos θ) / dθ',fmt(dc/d,4),'r',1],['−sin θ',fmt(-Math.sin(th),4),'t']]}
+function drawProduct(c){const x=N.px,d=N.pdx,s=Math.sin(x),q=x*x,s2=Math.sin(x+d),q2=(x+d)**2,ds=s2-s,dq=q2-q;
+  const ym=Math.max(2.5,q2*1.3);const B=fitBox(p,-0.32,1.5,-ym*.1,ym,{equal:false,pad:30});
+  R(c,B.X(0),B.Y(0),B.X(s),B.Y(q),rgba(K.blue,.35),K.blue,2);
+  R(c,B.X(s),B.Y(0),B.X(s2),B.Y(q),ds>=0?rgba(K.green,.55):rgba(K.red,.55),ds>=0?K.green:K.red,1.4);
+  R(c,B.X(0),B.Y(q),B.X(Math.min(s,s2)),B.Y(q2),rgba(K.teal,.55),K.teal,1.4);
+  if(ds>0)R(c,B.X(s),B.Y(q),B.X(s2),B.Y(q2),rgba(K.yellow,.8),null);
+  T(c,'sin x',B.X(s/2),B.Y(0)+16,{size:17});T(c,'x²',B.X(0)-14,B.Y(q/2),{size:17,align:'right'});
+  T(c,'f = sin(x)·x²',B.X(s/2),B.Y(q/2),{size:17});
+  T(c,'x² · d(sin x)',B.X(Math.max(s,s2))+8,B.Y(q*.5),{col:ds>=0?K.green:K.red,size:14,align:'left'});
+  T(c,'sin x · d(x²)',B.X(s/2),B.Y(q2)-14,{col:K.teal,size:14});
+  const df=s2*q2-s*q;return[['x',fmt(x,3)],['dx',fmt(d,4),'y'],['df exact',fmt(df,5),'b',1],['right strip  x²·d(sin x)',fmt(q*ds,5),ds>=0?'g':'r'],['top strip  sin x·d(x²)',fmt(s*dq,5),'t'],['corner',fmt(ds*dq,5),'y'],['df / dx',fmt(df/d,4),'b',1],['x²·cos x + sin x·2x',fmt(q*Math.cos(x)+s*2*x,4),'g']]}
+p.draw=c=>{const r={rings:drawRings,square:drawSquare,cube:drawCube,puddle:drawPuddle,sine:drawSine,product:drawProduct}[N.mode](c);readout(ro,r)};
+function up(){p.render()}
+pointer(p.cv,{down(x,y){if(N.mode!=='sine'||!BOX)return null;return'th'},move(t,x,y){if(!BOX)return;let a=Math.atan2(BOX.iy(y),BOX.ix(x));if(a<0)a+=2*PI;N.th=a;$('#n-th').value=a;$('#n-th').previousElementSibling.querySelector('output').textContent=fmt(a,2);up()}});
+setMode(N.mode);
+})();
+
+/* ================= LAB 3: CHAINS & CONSTRAINTS ================= */
+(()=>{
+const S={mode:'chain',inner:'sq',outer:'sin',x:1.2,dx:0.12,curve:'circle',P:[3,4],d:[-0.9,-0.25],y:4,rate:-1,t:0,play:false};
+const INNER={sq:{l:'x²',f:x=>x*x,d:x=>2*x},lin:{l:'3x',f:x=>3*x,d:()=>3},sin:{l:'sin x',f:Math.sin,d:Math.cos}};
+const OUTER={sin:{l:'sin(h)',c:s=>`sin(${s})`,f:Math.sin,d:Math.cos},sq:{l:'h²',c:s=>`(${s})²`,f:u=>u*u,d:u=>2*u},exp:{l:'eʰ',c:s=>`e^(${s})`,f:Math.exp,d:Math.exp}};
+const CUR={circle:{l:'x² + y² = 25',F:(x,y)=>x*x+y*y-25,Fx:(x,y)=>2*x,Fy:(x,y)=>2*y,view:[-7.5,7.5,-6.5,6.5],P:[3,4],d:[-0.9,-0.25],band:4,lhs:'x² + y²',rhs:'25'},
+  sxy:{l:'sin(x)·y² = x',F:(x,y)=>Math.sin(x)*y*y-x,Fx:(x,y)=>Math.cos(x)*y*y-1,Fy:(x,y)=>2*y*Math.sin(x),view:[-9,9,-6.5,6.5],P:[2,Math.sqrt(2/Math.sin(2))],d:[0.6,0.5],band:2.5,lhs:'sin(x)·y²',rhs:'x'},
+  ln:{l:'eʸ = x   (y = ln x)',F:(x,y)=>Math.exp(y)-x,Fx:()=>-1,Fy:(x,y)=>Math.exp(y),view:[-1.5,9,-3.5,3.2],P:[2,Math.log(2)],d:[1,0.2],band:1.5,lhs:'eʸ',rhs:'x'}};
+const p=new Plot($('#cv-chain'));const pn=$('#pn-chain');const groups={};const ro=h('dl',{class:'read'});
+const mk=k=>{groups[k]=h('div',{class:'group'});pn.append(groups[k]);return groups[k]};
+let g=mk('chain');g.append(h('h3',{},'inner h(x)'));const si=h('div',{class:'seg math'});g.append(si);segment(si,Object.entries(INNER).map(([k,o])=>[k,o.l]),S.inner,v=>{S.inner=v;up()});
+g.append(h('h3',{},'outer g(h)'));const so=h('div',{class:'seg math'});g.append(so);segment(so,Object.entries(OUTER).map(([k,o])=>[k,o.l]),S.outer,v=>{S.outer=v;up()});
+const sX=slider(g,{id:'c-x',label:'x',min:-3,max:3,value:S.x},v=>{S.x=v;up()});slider(g,{id:'c-dx',label:'nudge dx',min:0.002,max:0.5,value:S.dx,log:true,f:v=>fmt(v,3)},v=>{S.dx=v;up()});
+g=mk('implicit');const sc=h('div',{class:'seg math'});g.append(sc);segment(sc,Object.entries(CUR).map(([k,o])=>[k,o.l]),S.curve,v=>{S.curve=v;S.P=[...CUR[v].P];S.d=[...CUR[v].d];bg=null;up()});
+g.append(h('div',{class:'row-btns'},h('button',{class:'btn',type:'button',onclick:snapP},'Snap point to curve'),h('button',{class:'btn primary',type:'button',onclick:tangentStep},'Make step keep dS = 0')));
+g=mk('ladder');slider(g,{id:'c-rate',label:'dy/dt (top of ladder)',min:-2,max:-0.1,value:S.rate,f:v=>fmt(v,2)+' m/s'},v=>{S.rate=v;up()});
+const playB=h('button',{class:'btn primary',type:'button',onclick:()=>{S.play=!S.play;playB.textContent=S.play?'Pause':'Let it slide';if(S.play)loop()}},'Let it slide');
+g.append(h('div',{class:'row-btns'},playB,h('button',{class:'btn',type:'button',onclick:()=>{S.play=false;playB.textContent='Let it slide';S.y=4;S.t=0;up()}},'Reset to y = 4')));
+pn.append(ro);
+const NOTES={
+ chain:[['The picture',[`Three number lines: <span class="m">x</span>, then <span class="m">h = h(x)</span>, then <span class="m">g(h)</span>. A nudge <span class="m">dx</span> on the top line forces a nudge <span class="m">dh ≈ h′(x)·dx</span> on the middle line.`,`The middle nudge forces <span class="m">dg ≈ g′(h)·dh</span> on the bottom line. You can only measure the bottom nudge in terms of <span class="m">dh</span> first, which is why the outer derivative is taken <em>with respect to h</em> and evaluated at <span class="m">h(x)</span>.`,`<span class="eq">dg/dx = (dg/dh)·(dh/dx)</span>. The cancelling <span class="m">dh</span> is a real cancellation of real nudges, not notation.`]],
+  ['Try',[`Default <span class="m">sin(x²)</span>: put <span class="m">x</span> near 2.2. The middle nudge goes right but the bottom one goes left, because <span class="m">cos(h)</span> is negative there.`,`Choose inner <span class="m">3x</span>: the middle line stretches every nudge by exactly 3.`,`Drag on the top line to move <span class="m">x</span>.`]]],
+ implicit:[['The picture',[`The background colours the value of <span class="m">S(x, y)</span> = left side − right side. The bright curve is where <span class="m">S = 0</span>.`,`Any tiny step <span class="m">(dx, dy)</span> changes <span class="m">S</span> by <span class="m">dS ≈ Sₓ·dx + S_y·dy</span>. "Taking the derivative of both sides" means computing this.`,`A step stays on the curve when <span class="m">dS = 0</span>. Solving gives the slope <span class="m">dy/dx = −Sₓ/S_y</span>, which is <span class="m">−x/y</span> on the circle.`,`On <span class="m">eʸ = x</span>: <span class="m">eʸ·dy = dx</span>, so <span class="m">dy/dx = 1/eʸ = 1/x</span>. That is the derivative of <span class="m">ln x</span>.`]],
+  ['Try',[`Drag the arrow head off the tangent direction: predicted and actual <span class="m">dS</span> both move away from 0.`,`Press <b>Make step keep dS = 0</b>: the step lines up with the tangent. Make the step short and it hugs the curve.`,`Drag the point to (3, 4) on the circle: slope −0.75.`]]],
+ ladder:[['The picture',[`A 5 m ladder: <span class="m">x(t)² + y(t)² = 5²</span> at every moment, so the left side is a function of time that never changes. Its time derivative is 0.`,`<span class="eq">2x·dx/dt + 2y·dy/dt = 0</span>, so <span class="m">dx/dt = −(y/x)·dy/dt</span>.`,`Same equation as the circle, but here every nudge is caused by a common nudge <span class="m">dt</span> in time. Implicit differentiation is this, minus the clock.`]],
+  ['Try',[`At the start (x = 3, y = 4, top falling at 1 m/s) the foot slides out at 4/3 m/s.`,`Let it slide. As <span class="m">y → 0</span> the foot's speed blows up: the model's assumption that the top stays on the wall breaks before that.`]]]
+};
+const ms=segment($('#c-mode'),[['chain','Chain rule'],['implicit','Implicit curves'],['ladder','Related rates']],S.mode,m=>setMode(m));
+function setMode(m){S.mode=m;ms.select(m);Object.entries(groups).forEach(([k,e])=>e.hidden=k!==m);
+  $('#c-notes').innerHTML=NOTES[m].map(([t,l])=>`<div class="note"><h4>${t}</h4><ul>${l.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('');
+  $('#c-hint').textContent={chain:'drag along the top line',implicit:'drag the point or the arrow head',ladder:''}[m];up()}
+SETMODE.chain=m=>{if(m==='ln'){setMode('implicit');S.curve='ln';S.P=[...CUR.ln.P];S.d=[...CUR.ln.d];bg=null;sc.querySelectorAll('button').forEach((b,i)=>b.setAttribute('aria-pressed',String(Object.keys(CUR)[i]==='ln')));up()}else if(m)setMode(m);else up()};
+let LN=null,B=null,bg=null,bgKey='';
+function ranges(){const I=INNER[S.inner],O=OUTER[S.outer];let a=Infinity,b=-Infinity;for(let x=-3;x<=3;x+=0.01){const v=I.f(x);a=Math.min(a,v);b=Math.max(b,v)}
+  let pad=Math.max(0.5,(b-a)*.08);const r2=[a-pad,b+pad];let c=Infinity,d=-Infinity;for(let u=r2[0];u<=r2[1];u+=(r2[1]-r2[0])/600){const v=O.f(u);c=Math.min(c,v);d=Math.max(d,v)}
+  pad=Math.max(0.3,(d-c)*.08);return[[-3.3,3.3],r2,[c-pad,d+pad]]}
+function numberLine(c,y,rg,label,col){const m=56,W=p.w-m-24;const X=v=>m+(v-rg[0])/(rg[1]-rg[0])*W;L(c,m,y,m+W,y,rgba(K.ink,.55),1.5);
+  const st=niceStep((rg[1]-rg[0])/(W/70));const dd=Math.max(0,-Math.floor(Math.log10(st)+1e-9));c.font=FMONO(10.5);c.fillStyle=K.faint;c.textAlign='center';c.textBaseline='top';
+  for(let i=Math.ceil(rg[0]/st);i<=Math.floor(rg[1]/st);i++){const px=X(i*st);L(c,px,y-4,px,y+4,rgba(K.ink,.4),1);c.fillStyle=K.faint;c.fillText((i*st).toFixed(dd),px,y+8)}
+  T(c,label,8,y-16,{align:'left',col,size:16});return X}
+function drawChain(c){const I=INNER[S.inner],O=OUTER[S.outer];const rg=ranges();const y1=p.h*.18,y2=p.h*.5,y3=p.h*.82;
+  const X1=numberLine(c,y1,rg[0],'x',K.yellow),X2=numberLine(c,y2,rg[1],'h = '+I.l,K.green),X3=numberLine(c,y3,rg[2],'g = '+O.c(I.l),K.red);
+  LN={X1,y1,rg};
+  for(let i=0;i<=30;i++){const x=-3+i*0.2,hh=I.f(x),gg=O.f(hh);const col=mix(K.red,K.yellow,i/30);c.globalAlpha=.28;
+    L(c,X1(x),y1,X2(hh),y2,col,1);L(c,X2(hh),y2,X3(gg),y3,col,1);c.globalAlpha=1}
+  const x=S.x,hx=I.f(x),gx=O.f(hx),x2=x+S.dx,h2=I.f(x2),g2=O.f(h2);
+  L(c,X1(x),y1,X2(hx),y2,rgba(K.ink,.8),1.6);L(c,X2(hx),y2,X3(gx),y3,rgba(K.ink,.8),1.6);
+  const band=(X,y,a,b,col,lab)=>{c.fillStyle=rgba(col,.28);const l=Math.min(X(a),X(b)),r=Math.max(X(a),X(b));c.fillRect(l,y-9,Math.max(2,r-l),18);
+    arrow(c,X(a),y-14,X(b),y-14,col,2.2);T(c,lab,(X(a)+X(b))/2,y-28,{col,size:15})};
+  band(X1,y1,x,x2,K.yellow,'dx');band(X2,y2,hx,h2,K.green,'dh');band(X3,y3,gx,g2,K.red,'dg');
+  dot(c,X1(x),y1,6,K.yellow);dot(c,X2(hx),y2,6,K.green);dot(c,X3(gx),y3,6,K.red);
+  const dh=h2-hx,dg=g2-gx;return[['x',fmt(x,3)],['dx',fmt(S.dx,4),'y'],['dh measured',fmt(dh,5),'g',1],['h′(x)·dx',fmt(I.d(x)*S.dx,5),'g'],['dg measured',fmt(dg,5),'r',1],['g′(h)·dh',fmt(O.d(hx)*dh,5),'r'],
+    ['dg / dx measured',fmt(dg/S.dx,4),'b',1],['g′(h(x)) · h′(x)',fmt(O.d(hx)*I.d(x),4),'b'],['= dg/dh × dh/dx',fmt(O.d(hx),3)+' × '+fmt(I.d(x),3),'']]}
+function buildBg(Cv){const key=S.curve+p.w+'x'+p.h;if(bg&&bgKey===key)return;bgKey=key;const st=2,W=Math.ceil(p.w/st),H=Math.ceil(p.h/st);
+  const oc=document.createElement('canvas');oc.width=W;oc.height=H;const ox=oc.getContext('2d');const im=ox.createImageData(W,H);const pxw=1/B.sx;
+  const pos=hex(K.teal),neg=hex(K.purple),cur=hex(K.blue),base=hex(K.stage);
+  for(let j=0;j<H;j++)for(let i=0;i<W;i++){const x=B.ix(i*st+st/2),y=B.iy(j*st+st/2);const v=Cv.F(x,y),gx=Cv.Fx(x,y),gy=Cv.Fy(x,y);const gm=Math.hypot(gx,gy)||1e-9;
+    const dist=Math.abs(v)/gm/pxw;let col;const k=(j*W+i)*4;
+    if(!isFinite(v)){col=base}else if(dist<1.6){col=cur}else{const t=v/Cv.band;const fr=t-Math.floor(t);const lev=fr<0.05||fr>0.95?.32:.10+.10*Math.min(1,Math.abs(t)/6);const tint=v>0?pos:neg;col=base.map((b,q)=>Math.round(lerp(b,tint[q],lev)))}
+    im.data[k]=col[0];im.data[k+1]=col[1];im.data[k+2]=col[2];im.data[k+3]=255}
+  ox.putImageData(im,0,0);bg=oc}
+function drawImplicit(c){const Cv=CUR[S.curve];const v=Cv.view;B=fitBox(p,v[0],v[1],v[2],v[3],{pad:10});buildBg(Cv);c.imageSmoothingEnabled=true;c.drawImage(bg,0,0,p.w,p.h);
+  c.strokeStyle=K.axis;c.lineWidth=1.1;c.beginPath();c.moveTo(0,B.Y(0));c.lineTo(p.w,B.Y(0));c.moveTo(B.X(0),0);c.lineTo(B.X(0),p.h);c.stroke();
+  const[px,py]=S.P,[dx,dy]=S.d;const Fx=Cv.Fx(px,py),Fy=Cv.Fy(px,py);
+  // tangent direction
+  const tl=Math.hypot(Fy,Fx)||1;const tx=-Fy/tl,ty=Fx/tl,k=3;L(c,B.X(px-tx*k),B.Y(py-ty*k),B.X(px+tx*k),B.Y(py+ty*k),rgba(K.ink,.5),1.3,[5,4]);
+  arrow(c,B.X(px),B.Y(py),B.X(px+dx),B.Y(py+dy),K.yellow,2.6);
+  L(c,B.X(px),B.Y(py),B.X(px+dx),B.Y(py),rgba(K.gold,.8),1.4,[3,3]);L(c,B.X(px+dx),B.Y(py),B.X(px+dx),B.Y(py+dy),rgba(K.green,.8),1.4,[3,3]);
+  T(c,'dx',B.X(px+dx/2),B.Y(py)+(dy>=0?14:-14),{col:K.gold,size:14});T(c,'dy',B.X(px+dx)+(dx>=0?14:-14),B.Y(py+dy/2),{col:K.green,size:14});
+  dot(c,B.X(px),B.Y(py),7,K.ink,K.blue);dot(c,B.X(px+dx),B.Y(py+dy),6,K.yellow);
+  T(c,Cv.l,14,20,{align:'left',col:K.blue,size:17});
+  const S0=Cv.F(px,py),pred=Fx*dx+Fy*dy,act=Cv.F(px+dx,py+dy)-S0;const on=Math.abs(S0)/(Math.hypot(Fx,Fy)||1)<0.03;
+  return[['point (x, y)',`(${fmt(px,2)}, ${fmt(py,2)})`],[`S = ${Cv.lhs} − ${Cv.rhs}`,fmt(S0,4),on?'g':'r'],['step (dx, dy)',`(${fmt(dx,2)}, ${fmt(dy,2)})`,'y',1],['∂S/∂x · dx',fmt(Fx*dx,4),'o'],['∂S/∂y · dy',fmt(Fy*dy,4),'g'],
+    ['dS predicted',fmt(pred,4),'b',1],['ΔS actual',fmt(act,4),'b'],['slope on curve  −Sₓ/S_y',on?fmt(-Fx/Fy,4):'snap point first','t',1],['step slope  dy/dx',fmt(dy/dx,4),'y']]}
+function snapP(){const Cv=CUR[S.curve];let[x,y]=S.P;for(let i=0;i<30;i++){const v=Cv.F(x,y),gx=Cv.Fx(x,y),gy=Cv.Fy(x,y),g2=gx*gx+gy*gy||1e-9;x-=v*gx/g2;y-=v*gy/g2}if(isFinite(x)&&isFinite(y))S.P=[x,y];up()}
+function tangentStep(){const Cv=CUR[S.curve];const[px,py]=S.P;const gx=Cv.Fx(px,py),gy=Cv.Fy(px,py);const gl=Math.hypot(gx,gy)||1;let tx=-gy/gl,ty=gx/gl;const[dx,dy]=S.d;const L0=Math.hypot(dx,dy);if(tx*dx+ty*dy<0){tx=-tx;ty=-ty}S.d=[tx*L0,ty*L0];up()}
+function drawLadder(c){const y=S.y,x=Math.sqrt(25-y*y);const Bx=fitBox(p,-1,6.4,-0.9,5.6);
+  R(c,Bx.X(-1),Bx.Y(5.6),Bx.X(0),Bx.Y(0),rgba(K.faint,.35),null);R(c,Bx.X(-1),Bx.Y(0),Bx.X(6.4),Bx.Y(-0.9),rgba(K.faint,.35),null);
+  L(c,Bx.X(0),Bx.Y(5.5),Bx.X(0),Bx.Y(0),K.dim,2);L(c,Bx.X(0),Bx.Y(0),Bx.X(6.3),Bx.Y(0),K.dim,2);
+  L(c,Bx.X(0),Bx.Y(y),Bx.X(x),Bx.Y(0),K.gold,7);
+  L(c,Bx.X(-0.35),Bx.Y(0),Bx.X(-0.35),Bx.Y(y),K.green,2);T(c,'y = '+fmt(y,2),Bx.X(-0.45),Bx.Y(y/2),{col:K.green,size:15,align:'right'});
+  L(c,Bx.X(0),Bx.Y(-0.4),Bx.X(x),Bx.Y(-0.4),K.yellow,2);T(c,'x = '+fmt(x,2),Bx.X(x/2),Bx.Y(-0.62),{col:K.yellow,size:15});
+  T(c,'5 m',Bx.X(x/2)+12,Bx.Y(y/2)-8,{size:16,align:'left'});
+  const vx=-y/x*S.rate;const scl=0.55;arrow(c,Bx.X(0.25),Bx.Y(y),Bx.X(0.25),Bx.Y(y+S.rate*scl),K.green,3);arrow(c,Bx.X(x),Bx.Y(0.3),Bx.X(x+Math.min(vx*scl,3)),Bx.Y(0.3),K.yellow,3);
+  T(c,'x² + y² = 5²',Bx.X(6.2),Bx.Y(5.3),{align:'right',size:18});T(c,'t = '+fmt(S.t,2)+' s',Bx.X(6.2),Bx.Y(4.8),{align:'right',font:FMONO(13),col:K.dim});
+  return[['y (top height)',fmt(y,3)+' m','g'],['x (foot distance)',fmt(x,3)+' m','y'],['dy/dt',fmt(S.rate,3)+' m/s','g',1],['dx/dt = −(y/x)·dy/dt',fmt(vx,3)+' m/s','y'],['2x·dx/dt',fmt(2*x*vx,3),'',1],['2y·dy/dt',fmt(2*y*S.rate,3),''],['sum (must be 0)',fmt(2*x*vx+2*y*S.rate,6),'b']]}
+let last=0;function loop(){last=performance.now();const st=t=>{if(!S.play)return;const dt=Math.min(0.05,(t-last)/1000);last=t;S.y+=S.rate*dt*0.6;S.t+=dt*0.6;if(S.y<=0.25){S.y=0.25;S.play=false;playB.textContent='Let it slide'}up();if(S.play)requestAnimationFrame(st)};requestAnimationFrame(st)}
+p.draw=c=>{const r={chain:drawChain,implicit:drawImplicit,ladder:drawLadder}[S.mode](c);readout(ro,r)};
+p.onResize=()=>{bg=null};
+function up(){p.render()}
+pointer(p.cv,{down(x,y){if(S.mode==='chain'&&LN){if(Math.abs(y-LN.y1)<36)return'x';return null}
+  if(S.mode==='implicit'&&B){const[px,py]=S.P,[dx,dy]=S.d;if(Math.hypot(x-B.X(px+dx),y-B.Y(py+dy))<20)return'head';if(Math.hypot(x-B.X(px),y-B.Y(py))<22)return'P';return null}return null},
+  move(t,x,y){if(t==='x'){const m=56,W=p.w-m-24;const v=LN.rg[0][0]+(x-m)/W*(LN.rg[0][1]-LN.rg[0][0]);sX.set(clamp(v,-3,3))}
+    else if(t==='P'){S.P=[B.ix(x),B.iy(y)];up()}else if(t==='head'){S.d=[B.ix(x)-S.P[0],B.iy(y)-S.P[1]];up()}}});
+setMode(S.mode);
+})();
+
+/* ================= LAB 4: e & LIMITS ================= */
+(()=>{
+const S={mode:'exp',a:2,t0:1,dt:0.3,lf:'dq',eps:1,del:0.3,hp:'sinpi',zw:0.8};
+const LF={dq:{l:'((2+h)³ − 8)/h',f:h=>((2+h)**3-8)/h,a:0,L:12,view:[-2,2,3,21],sym:'h'},
+  sinpi:{l:'sin(πx)/(x² − 1)',f:x=>Math.sin(PI*x)/(x*x-1),a:1,L:-PI/2,view:[-0.3,2.3,-2.6,0.8],sym:'x'},
+  jump:{l:'jump at 0',f:h=>h<0?1+0.25*h:2+0.25*h,a:0,L:1.5,view:[-2,2,-0.2,3.2],sym:'h',jump:true}};
+const HP={sinpi:{l:'sin(πx) / (x² − 1)',f:x=>Math.sin(PI*x),g:x=>x*x-1,a:1,fd:-PI,gd:2,fl:'sin(πx)',gl:'x² − 1'},
+  exp:{l:'(eˣ − 1) / x',f:x=>Math.exp(x)-1,g:x=>x,a:0,fd:1,gd:1,fl:'eˣ − 1',gl:'x'},
+  ln:{l:'ln x / (x − 1)',f:x=>Math.log(x),g:x=>x-1,a:1,fd:1,gd:1,fl:'ln x',gl:'x − 1'}};
+const p=new Plot($('#cv-limits'));const pn=$('#pn-limits');const groups={};const ro=h('dl',{class:'read'});const stat=h('div',{class:'status'});
+const mk=k=>{groups[k]=h('div',{class:'group'});pn.append(groups[k]);return groups[k]};
+let g=mk('exp');const sA=slider(g,{id:'l-a',label:'base a',min:1.1,max:8,step:0.001,value:S.a,f:v=>fmt(v,3)},v=>{S.a=v;up()});
+const sT=slider(g,{id:'l-t',label:'time t',min:-2,max:2.6,value:S.t0},v=>{S.t0=v;up()});
+slider(g,{id:'l-dt',label:'nudge dt',min:0.0005,max:1,value:S.dt,log:true,f:v=>fmt(v,4)},v=>{S.dt=v;up()});
+g.append(h('div',{class:'row-btns'},h('button',{class:'btn',type:'button',onclick:()=>sA.set(2)},'a = 2'),h('button',{class:'btn',type:'button',onclick:()=>sA.set(3)},'a = 3'),h('button',{class:'btn',type:'button',onclick:()=>sA.set(8)},'a = 8'),h('button',{class:'btn primary',type:'button',onclick:()=>sA.set(E)},'Reveal e')));
+g=mk('eps');const sf=h('div',{class:'seg math'});g.append(sf);segment(sf,Object.entries(LF).map(([k,o])=>[k,o.l]),S.lf,v=>{S.lf=v;up()});
+slider(g,{id:'l-eps',label:'ε  (output tolerance)',min:0.02,max:3,value:S.eps,log:true,f:v=>fmt(v,3)},v=>{S.eps=v;up()});
+const sD=slider(g,{id:'l-del',label:'δ  (input window)',min:0.001,max:1.5,value:S.del,log:true,f:v=>fmt(v,4)},v=>{S.del=v;up()});
+g.append(h('div',{class:'row-btns'},h('button',{class:'btn primary',type:'button',onclick:()=>{const d=bestDelta();if(d>0)sD.set(d*0.98)}},'Find the largest δ that works')));
+g=mk('lhop');const sh=h('div',{class:'seg math'});g.append(sh);segment(sh,Object.entries(HP).map(([k,o])=>[k,o.l]),S.hp,v=>{S.hp=v;up()});
+const sZ=slider(g,{id:'l-zw',label:'zoom window ±',min:0.002,max:1.5,value:S.zw,log:true,f:v=>fmt(v,4)},v=>{S.zw=v;up()});
+g.append(h('div',{class:'row-btns'},h('button',{class:'btn primary',type:'button',onclick:()=>{const s=S.zw;tween(2000,k=>sZ.set(Math.exp(lerp(Math.log(Math.max(s,1)),Math.log(0.003),ease(k)))))}},'Zoom in on the 0/0 point')));
+pn.append(stat,ro);
+const NOTES={
+ exp:[['The picture',[`For <span class="m">aᵗ</span>, the exponent rule <span class="m">a^(t+dt) = aᵗ·a^dt</span> lets you factor the derivative into <span class="m">aᵗ</span> times a piece that only involves <span class="m">dt</span>.`,`So every exponential's slope is proportional to its height. The proportionality constant <span class="m">(a^dt − 1)/dt</span> settles on a fixed number as <span class="m">dt → 0</span>: 0.6931 for 2, 1.0986 for 3, 2.0794 for 8 (three times the value for 2, since 8 = 2³).`,`Exactly one base makes the constant 1: that base is <span class="m">e ≈ 2.71828</span>. That property is what defines <span class="m">e</span>. The constant for base <span class="m">a</span> is <span class="m">ln a</span>, because <span class="m">aᵗ = e^(ln a · t)</span>.`]],
+  ['Try',[`Hunt for <span class="m">e</span>: slide <span class="m">a</span> until slope ÷ height reads 1.000. Then press <b>Reveal e</b>.`,`Move <span class="m">t</span> while keeping <span class="m">a</span> fixed. The ratio doesn't change: it is independent of when you look.`,`Writing growth as <span class="m">e^(rt)</span> makes <span class="m">r</span> readable as "rate of change ÷ current amount". That's why populations, cooling and interest are written with <span class="m">e</span>.`]]],
+ eps:[['The picture',[`A limit <span class="m">L</span> exists when, for <em>any</em> tolerance <span class="m">ε</span> around <span class="m">L</span>, you can find an input window <span class="m">δ</span> around <span class="m">a</span> (excluding <span class="m">a</span> itself) whose outputs all stay inside the <span class="m">ε</span> band.`,`The point itself can be undefined (a hole). Limits ask about the approach, never about the value at <span class="m">a</span>.`,`The first function is the difference quotient for <span class="m">x³</span> at 2. Its limit 12 is the derivative: the derivative <em>is</em> a limit.`]],
+  ['Try',[`Make <span class="m">ε</span> tiny on the first function, then press <b>Find the largest δ</b>. A window always exists: the limit is 12.`,`Switch to <b>jump</b>. Once <span class="m">ε ≤ 0.5</span> no <span class="m">δ</span> works, however small. Outputs straddle a gap that never shrinks: no limit.`,`On <span class="m">sin(πx)/(x² − 1)</span>, the limit is −π/2 ≈ −1.5708.`]]],
+ lhop:[['The picture',[`Both top and bottom are 0 at <span class="m">a</span>. Zoom in: each looks like a straight line through <span class="m">(a, 0)</span>.`,`A nudge <span class="m">dx</span> away gives top ≈ <span class="m">f′(a)·dx</span> and bottom ≈ <span class="m">g′(a)·dx</span>. The <span class="m">dx</span>'s cancel, so the ratio is <span class="m">f′(a)/g′(a)</span>.`,`For <span class="m">sin(πx)/(x² − 1)</span> at 1: <span class="m">−π/2</span>. This was Johann Bernoulli's discovery, sold to L'Hôpital.`]],
+  ['Try',[`Press <b>Zoom in</b> and watch the two curves become two lines, and the ratio column match the slope ratio.`,`Note that you can't use this to <em>derive</em> new derivative formulas from their own definition. That would be circular.`]]]
+};
+const ms=segment($('#l-mode'),[['exp','e: slope = height'],['eps','ε–δ limits'],['lhop',"L'Hôpital"]],S.mode,m=>setMode(m));
+function setMode(m){S.mode=m;ms.select(m);Object.entries(groups).forEach(([k,e])=>e.hidden=k!==m);stat.hidden=m==='lhop';
+  $('#l-notes').innerHTML=NOTES[m].map(([t,l])=>`<div class="note"><h4>${t}</h4><ul>${l.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('');
+  $('#l-hint').textContent=m==='exp'?'drag sideways to move t':'';up()}
+SETMODE.limits=m=>{if(m)setMode(m);else up()};
+function check(d){const F=LF[S.lf];if(d<=0)return false;for(let k=1;k<=700;k++){const o=d*k/700;for(const x of[F.a+o,F.a-o]){const v=F.f(x);if(isFinite(v)&&Math.abs(v-F.L)>=S.eps)return false}}return true}
+function bestDelta(){const F=LF[S.lf];const span=(F.view[1]-F.view[0])/2;const n=4000,s=span/n;for(let k=1;k<=n;k++){const o=k*s;for(const x of[F.a+o,F.a-o]){const v=F.f(x);if(isFinite(v)&&Math.abs(v-F.L)>=S.eps)return(k-1)*s}}return span}
+function drawExp(c){const a=S.a,f=t=>Math.pow(a,t);p.v={x0:-2.6,x1:3.2,y0:-1.2,y1:10};p.grid();const la=Math.log(a);
+  p.curve(t=>Math.pow(E,t),rgba(K.ink,.18),1.4,{dash:[3,4]});p.curve(f,K.blue,3);
+  const t=S.t0,ft=f(t),sl=la*ft;
+  L(c,p.X(t-4),p.Y(ft-4*sl),p.X(t+4),p.Y(ft+4*sl),rgba(K.ink,.85),1.5);
+  const sec=(f(t+S.dt)-ft)/S.dt;L(c,p.X(t-4),p.Y(ft-4*sec),p.X(t+4),p.Y(ft+4*sec),rgba(K.yellow,.6),1.2,[5,4]);
+  L(c,p.X(t),p.Y(0),p.X(t),p.Y(ft),K.teal,3);T(c,'height = aᵗ',p.X(t)-8,p.Y(ft/2),{col:K.teal,size:15,align:'right'});
+  L(c,p.X(t),p.Y(ft),p.X(t+1),p.Y(ft),K.yellow,2.2);L(c,p.X(t+1),p.Y(ft),p.X(t+1),p.Y(ft+sl),K.green,2.6);
+  T(c,'1',p.X(t+.5),p.Y(ft)+13,{col:K.yellow,size:15});T(c,'slope',p.X(t+1)+8,p.Y(ft+sl/2),{col:K.green,size:15,align:'left'});
+  dot(c,p.X(t),p.Y(ft),7,K.ink,K.blue);
+  // inset
+  const iw=Math.min(230,p.w*.42),ih=130,ix=14,iy=46;c.fillStyle=rgba(K.panel,.92);c.fillRect(ix,iy,iw,ih);c.strokeStyle=K.line;c.strokeRect(ix+.5,iy+.5,iw,ih);
+  const IX=v=>ix+28+(v-1)/(8-1)*(iw-40),IY=v=>iy+ih-22-(v)/(2.2)*(ih-38);
+  L(c,IX(1),IY(0),IX(8),IY(0),K.axis,1);L(c,IX(1),IY(0),IX(1),IY(2.2),K.axis,1);
+  L(c,IX(1),IY(1),IX(8),IY(1),rgba(K.yellow,.5),1,[3,3]);L(c,IX(E),IY(0),IX(E),IY(2.2),rgba(K.yellow,.5),1,[3,3]);
+  c.beginPath();for(let v=1;v<=8;v+=0.05){const X=IX(v),Y=IY(Math.log(v));v===1?c.moveTo(X,Y):c.lineTo(X,Y)}c.strokeStyle=K.purple;c.lineWidth=2;c.stroke();
+  [[2,'2'],[8,'8']].forEach(([v,lab])=>{dot(c,IX(v),IY(Math.log(v)),3,K.dim)});
+  dot(c,IX(a),IY(la),5,K.yellow);T(c,'constant = ln a',ix+8,iy+12,{align:'left',font:FMONO(11),col:K.dim});
+  T(c,'e',IX(E),IY(0)+10,{col:K.yellow,size:13});T(c,'1',IX(1)-8,IY(1),{font:FMONO(10),col:K.dim,align:'right'});T(c,'base a →',IX(8),IY(0)+11,{font:FMONO(10),col:K.dim,align:'right'});
+  T(c,'f(t) = aᵗ',14,20,{align:'left',col:K.blue,size:17});
+  const hit=Math.abs(la-1)<0.004;stat.className='status '+(hit?'ok':'');stat.textContent=hit?'Slope equals height everywhere. This base is e ≈ 2.71828.':`Slope ÷ height = ${fmt(la,4)}. Find the base where it equals 1.`;
+  return[['a',fmt(a,4)],['height aᵗ',fmt(ft,4),'t'],['(a^dt − 1) / dt',fmt((Math.pow(a,S.dt)-1)/S.dt,5),'y',1],['ln a  (the limit)',fmt(la,5),'p'],['slope a′(t) exact',fmt(sl,4),'g',1],['slope ÷ height',fmt(sl/ft,5),'b']]}
+function drawEps(c){const F=LF[S.lf];p.v={x0:F.view[0],x1:F.view[1],y0:F.view[2],y1:F.view[3]};p.grid();
+  const ok=check(S.del);const best=bestDelta();
+  c.fillStyle=rgba(K.yellow,.13);c.fillRect(0,p.Y(F.L+S.eps),p.w,p.Y(F.L-S.eps)-p.Y(F.L+S.eps));L(c,0,p.Y(F.L+S.eps),p.w,p.Y(F.L+S.eps),rgba(K.yellow,.6),1,[4,3]);L(c,0,p.Y(F.L-S.eps),p.w,p.Y(F.L-S.eps),rgba(K.yellow,.6),1,[4,3]);
+  c.fillStyle=rgba(K.green,.12);c.fillRect(p.X(F.a-S.del),0,p.X(F.a+S.del)-p.X(F.a-S.del),p.h);
+  if(F.jump){p.curve(F.f,K.blue,3,{to:-1e-9});p.curve(F.f,K.blue,3,{from:1e-9})}else p.curve(F.f,K.blue,3);
+  const col=ok?K.green:K.red;
+  if(F.jump){p.curve(F.f,col,4.5,{from:F.a-S.del,to:-1e-9});p.curve(F.f,col,4.5,{from:1e-9,to:F.a+S.del})}else p.curve(F.f,col,4.5,{from:F.a-S.del,to:F.a+S.del});
+  if(F.jump){hole(c,p.X(0),p.Y(1),5,K.blue);hole(c,p.X(0),p.Y(2),5,K.blue)}else hole(c,p.X(F.a),p.Y(F.L),6,K.ink);
+  T(c,'L ± ε',p.w-12,p.Y(F.L+S.eps)-10,{col:K.yellow,align:'right',size:15});T(c,'a ± δ',p.X(F.a+S.del)+6,16,{col:K.green,align:'left',size:15});
+  T(c,F.l,14,20,{align:'left',col:K.blue,size:17});
+  stat.className='status '+(ok?'ok':'bad');
+  stat.textContent=F.jump&&S.eps<=0.5?'No δ works for this ε. The outputs straddle a gap of 1, so there is no limit.':ok?`Every input within δ of ${F.a} lands within ε of L. This δ works.`:'Some input in the window lands outside the ε band. Shrink δ.';
+  return[['a',String(F.a)],['candidate L',F.jump?'1.5 (best guess)':fmt(F.L,5),'b'],['ε',fmt(S.eps,4),'y',1],['your δ',fmt(S.del,4),'g'],['largest δ that works',best>0?fmt(best,4):'none','t'],[`f(a + δ/2)`,fmt(F.f(F.a+S.del/2),5),'',1],[`f(a − δ/2)`,fmt(F.f(F.a-S.del/2),5),'']]}
+function drawHop(c){const H=HP[S.hp],w=S.zw;const k=Math.max(Math.abs(H.fd),Math.abs(H.gd))*1.25;p.v={x0:H.a-w,x1:H.a+w,y0:-k*w,y1:k*w};p.grid();
+  L(c,p.X(H.a-w),p.Y(-H.fd*w),p.X(H.a+w),p.Y(H.fd*w),rgba(K.blue,.45),1.2,[5,4]);L(c,p.X(H.a-w),p.Y(-H.gd*w),p.X(H.a+w),p.Y(H.gd*w),rgba(K.green,.45),1.2,[5,4]);
+  p.curve(H.f,K.blue,3);p.curve(H.g,K.green,3);
+  const dx=w/2,x=H.a+dx,fv=H.f(x),gv=H.g(x);L(c,p.X(x),p.Y(0),p.X(x),p.Y(fv),K.blue,4);L(c,p.X(x)+6,p.Y(0),p.X(x)+6,p.Y(gv),K.green,4);
+  L(c,p.X(H.a),p.Y(0),p.X(x),p.Y(0),K.yellow,3);T(c,'dx',p.X(H.a+dx/2),p.Y(0)+(fv>0?14:-14),{col:K.yellow,size:15});
+  dot(c,p.X(H.a),p.Y(0),6,K.ink);
+  T(c,'f = '+H.fl,14,20,{align:'left',col:K.blue,size:17});T(c,'g = '+H.gl,14,42,{align:'left',col:K.green,size:17});
+  return[['dx',fmt(dx,5),'y'],['f(a + dx)',fmt(fv,6),'b',1],['g(a + dx)',fmt(gv,6),'g'],['f / g',fmt(fv/gv,6),'',1],["f′(a) / g′(a)",fmt(H.fd/H.gd,6),'t'],['difference',fmt(fv/gv-H.fd/H.gd,6),'r']]}
+p.draw=c=>{const r={exp:drawExp,eps:drawEps,lhop:drawHop}[S.mode](c);readout(ro,r)};
+function up(){p.render()}
+pointer(p.cv,{down(x,y){return S.mode==='exp'?'t':null},move(t,x){sT.set(clamp(p.ix(x),-2,2.6))}});
+setMode(S.mode);
+})();
+
+/* ================= LAB 5: TRANSFORMATIONS ================= */
+(()=>{
+const PHI=(1+Math.sqrt(5))/2,PSI=(1-Math.sqrt(5))/2;
+const TF={sq:{l:'x²',f:x=>x*x,d:x=>2*x,x0:1},cu:{l:'x³',f:x=>x**3,d:x=>3*x*x,x0:0.6},inv:{l:'1 + 1/x',f:x=>1+1/x,d:x=>-1/(x*x),x0:PHI},sin:{l:'sin x',f:Math.sin,d:Math.cos,x0:0.5}};
+const S={mode:'stretch',fk:'sq',x0:1,w:3.5,seed:-0.7,dots:[],iter:0,anim:null};
+function spread(){S.dots=[];for(let i=0;i<70;i++){let v=-3.4+6.8*i/69;if(Math.abs(v)<0.05)v=0.05;S.dots.push(v)}S.iter=0}
+function near(){S.dots=[];for(let i=0;i<40;i++)S.dots.push(PSI-0.06+0.12*i/39);S.iter=0}
+spread();
+const p=new Plot($('#cv-transform'));const pn=$('#pn-transform');const groups={};const ro=h('dl',{class:'read'});const seqEl=h('div',{class:'seq'});
+const mk=k=>{groups[k]=h('div',{class:'group'});pn.append(groups[k]);return groups[k]};
+let g=mk('stretch');const sfn=h('div',{class:'seg math'});g.append(sfn);segment(sfn,Object.entries(TF).map(([k,o])=>[k,o.l]),S.fk,v=>{S.fk=v;sX.set(TF[v].x0)});
+const sX=slider(g,{id:'t-x0',label:'input x',min:-3,max:3,value:S.x0},v=>{S.x0=v;up()});
+const sW=slider(g,{id:'t-w',label:'zoom window ±',min:0.01,max:4,value:S.w,log:true,f:v=>fmt(v,3)},v=>{S.w=v;up()});
+g.append(h('div',{class:'row-btns'},h('button',{class:'btn primary',type:'button',onclick:()=>{const s=S.w;tween(2200,k=>sW.set(Math.exp(lerp(Math.log(Math.max(s,2)),Math.log(0.02),ease(k)))))}},'Zoom into x'),h('button',{class:'btn',type:'button',onclick:()=>sW.set(3.5)},'Zoom out')));
+g=mk('iter');g.append(h('div',{class:'row-btns'},h('button',{class:'btn primary',type:'button',onclick:()=>apply(1)},'Apply f once'),h('button',{class:'btn',type:'button',onclick:()=>apply(6)},'Apply 6×'),h('button',{class:'btn',type:'button',onclick:()=>{spread();up()}},'Spread dots'),h('button',{class:'btn',type:'button',onclick:()=>{near();up()}},'Cluster near ψ')));
+slider(g,{id:'t-seed',label:'calculator seed x₀',min:-3,max:3,value:S.seed},v=>{S.seed=v;up()});g.append(seqEl);
+pn.append(ro);
+const NOTES={
+ stretch:[['The picture',[`Each input on the top line is sent to its output on the bottom line. Both lines use the same scale, centred on <span class="m">x</span> and <span class="m">f(x)</span>.`,`Zoom in on a neighbourhood: evenly spaced inputs land evenly spaced again, stretched by a constant factor. That factor is <span class="m">f′(x)</span>.`,`<span class="m">|f′| > 1</span> spreads points out, <span class="m">|f′| < 1</span> squeezes them, a negative <span class="m">f′</span> also flips their order, and <span class="m">f′ = 0</span> collapses the neighbourhood towards a point.`,`This view needs no graph, so it carries over to multivariable calculus and complex analysis, where graphs are not available.`]],
+  ['Try',[`<span class="m">x²</span> at 1: stretch ×2. At 3: ×6. At 0.25: squeezed ×0.5. At 0: collapsed. At −2: ×4 and flipped.`,`Press <b>Zoom into x</b> and watch the connecting lines turn parallel: the map looks like plain multiplication up close.`]]],
+ iter:[['The picture',[`The infinite fraction 1 + 1/(1 + 1/(1 + …)) is what you get by applying <span class="m">f(x) = 1 + 1/x</span> over and over.`,`Two fixed points: <span class="m">φ ≈ 1.618</span> and <span class="m">ψ = −1/φ ≈ −0.618</span>. Both satisfy <span class="m">f(x) = x</span>.`,`<span class="m">|f′(φ)| ≈ 0.38 < 1</span>: each application squeezes a neighbourhood towards <span class="m">φ</span>. Stable.`,`<span class="m">|f′(ψ)| ≈ 2.62 > 1</span>: each application stretches the neighbourhood away (and flips it). Unstable. That's why a calculator always lands on 1.618.`]],
+  ['Try',[`Press <b>Apply f once</b> a few times. Dots pile up on φ.`,`Press <b>Cluster near ψ</b>, then apply. Even dots starting very close to ψ are thrown off and end at φ.`,`Set the seed to exactly −0.618: the sequence holds for a while, then rounding error grows by 2.6× per step and it escapes.`]]]
+};
+const ms=segment($('#t-mode'),[['stretch','Local stretch'],['iter','Iterating 1 + 1/x']],S.mode,m=>setMode(m));
+function setMode(m){S.mode=m;ms.select(m);Object.entries(groups).forEach(([k,e])=>e.hidden=k!==m);
+  $('#t-notes').innerHTML=NOTES[m].map(([t,l])=>`<div class="note"><h4>${t}</h4><ul>${l.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('');
+  $('#t-hint').textContent=m==='stretch'?'drag the top line to move x':'';up()}
+SETMODE.transform=m=>{if(m)setMode(m);else up()};
+const ff=x=>1+1/x;
+function apply(n){if(S.anim)return;let left=n;const run=()=>{const from=S.dots.slice(),to=from.map(ff);S.anim={from,to,k:0};
+  tween(n>1?380:700,k=>{S.anim.k=ease(k);up()},()=>{S.dots=to.map(v=>isFinite(v)?v:1e6);S.iter++;S.anim=null;left--;up();if(left>0)run()})};run()}
+function line(c,y,c0,w,label,col){const m=30,W=p.w-2*m;const X=v=>m+(v-(c0-w))/(2*w)*W;L(c,m,y,m+W,y,rgba(K.ink,.6),1.5);
+  const st=niceStep(2*w/(W/75)),dd=Math.max(0,-Math.floor(Math.log10(st)+1e-9));c.font=FMONO(10.5);c.textAlign='center';c.textBaseline='top';
+  for(let i=Math.ceil((c0-w)/st);i<=Math.floor((c0+w)/st);i++){const px=X(i*st);L(c,px,y-4,px,y+4,rgba(K.ink,.4),1);c.fillStyle=K.faint;c.fillText((i*st).toFixed(dd),px,y+8)}
+  T(c,label,m,y-18,{align:'left',col,size:15});return X}
+let XT=null;
+function drawStretch(c){const F=TF[S.fk],x0=S.x0,w=S.w,y0=F.f(x0);const y1=p.h*.26,y2=p.h*.74;
+  const X1=line(c,y1,x0,w,'input',K.ink),X2=line(c,y2,isFinite(y0)?y0:0,w,'output = '+F.l,K.ink);XT=X1;
+  const n=40;c.save();c.beginPath();c.rect(0,y1-2,p.w,y2-y1+4);c.clip();
+  for(let i=0;i<=n;i++){const x=x0-w+2*w*i/n,y=F.f(x);if(!isFinite(y))continue;const col=mix(K.red,K.yellow,i/n);c.globalAlpha=.75;L(c,X1(x),y1,X2(y),y2,col,1.2);c.globalAlpha=1}
+  c.restore();
+  for(let i=0;i<=n;i++){const x=x0-w+2*w*i/n,y=F.f(x);const col=mix(K.red,K.yellow,i/n);dot(c,X1(x),y1,3,col);if(isFinite(y)&&X2(y)>-10&&X2(y)<p.w+10)dot(c,X2(y),y2,3,col)}
+  dot(c,X1(x0),y1,6.5,K.ink,K.blue);if(isFinite(y0))dot(c,X2(y0),y2,6.5,K.ink,K.blue);
+  const hh=w/5,a=F.f(x0-hh),b=F.f(x0+hh);c.fillStyle=rgba(K.blue,.18);c.fillRect(X1(x0-hh),y1-10,X1(x0+hh)-X1(x0-hh),20);
+  if(isFinite(a)&&isFinite(b)){c.fillStyle=rgba(K.green,.2);c.fillRect(Math.min(X2(a),X2(b)),y2-10,Math.abs(X2(b)-X2(a)),20)}
+  const d=F.d(x0),meas=(b-a)/(2*hh);const verdict=Math.abs(d)<0.02?'collapses':Math.abs(d)<1?'squeezes':'stretches';
+  T(c,`× ${fmt(d,3)}  ·  ${verdict}${d<0?' and flips':''}`,p.w/2,(y1+y2)/2,{font:FMONO(14),col:K.yellow});
+  return[['x',fmt(x0,3)],['f(x)',fmt(y0,4),'b'],["f′(x)",fmt(d,4),'g',1],['measured stretch',fmt(meas,4),'y'],['|f′|',fmt(Math.abs(d),4),''],['orientation',d<0?'flipped':'kept','']]}
+function drawIter(c){const y=p.h*.5;const X=line(c,y,0,3.6,'one number line: outputs become inputs',K.ink);
+  [[PHI,'φ',K.green,'|f′| = 0.38  pulls in'],[PSI,'ψ',K.red,'|f′| = 2.62  pushes out']].forEach(([v,l,col,txt])=>{L(c,X(v),y-60,X(v),y+30,rgba(col,.6),1.5,[4,3]);T(c,l,X(v),y-72,{col,size:20});T(c,txt,X(v),y+44,{font:FMONO(11.5),col})});
+  const pos=S.anim?S.dots.map((_,i)=>{const a=S.anim.from[i],b=S.anim.to[i];return isFinite(b)?lerp(a,b,S.anim.k):a}):S.dots;
+  if(S.anim){S.anim.from.forEach((a,i)=>{const b=S.anim.to[i];if(!isFinite(b))return;const xa=X(a),xb=X(b);c.beginPath();c.moveTo(xa,y);c.quadraticCurveTo((xa+xb)/2,y-Math.min(140,Math.abs(xb-xa)*.6),xb,y);c.strokeStyle=rgba(K.yellow,.18);c.lineWidth=1;c.stroke()})}
+  pos.forEach((v,i)=>{const px=X(v);if(px<-5||px>p.w+5)return;dot(c,px,y-(i%5)*5-8,3.4,mix(K.red,K.yellow,i/pos.length))});
+  T(c,`iterations: ${S.iter}`,p.w-14,22,{align:'right',font:FMONO(12),col:K.dim});T(c,'f(x) = 1 + 1/x',14,22,{align:'left',col:K.blue,size:17});
+  let x=S.seed;const seq=[x];for(let i=0;i<14;i++){x=ff(x);seq.push(x)}seqEl.innerHTML='seed sequence: '+seq.map((v,i)=>i===14?`<b>${fmt(v,5)}</b>`:fmt(v,3)).join(' → ');
+  const inView=S.dots.filter(v=>Math.abs(v-PHI)<0.01).length;
+  return[['φ = (1 + √5)/2',fmt(PHI,5),'g'],["f′(φ) = −1/φ²",fmt(-1/(PHI*PHI),4),'g'],['ψ = −1/φ',fmt(PSI,5),'r',1],["f′(ψ) = −1/ψ²",fmt(-1/(PSI*PSI),4),'r'],['dots within 0.01 of φ',`${inView} / ${S.dots.length}`,'y',1]]}
+p.draw=c=>{const r={stretch:drawStretch,iter:drawIter}[S.mode](c);readout(ro,r)};
+function up(){p.render()}
+pointer(p.cv,{down(x,y){return S.mode==='stretch'&&y<p.h*.45?'x':null},move(t,x,y,dx){const F=TF[S.fk];const W=p.w-60;sX.set(clamp(S.x0-dx/W*2*S.w,-3,3))}});
+setMode(S.mode);
+})();
+
+/* ================= FORMULA MAP ================= */
+(()=>{
+const fr=(a,b)=>`<span class="frac"><span>${a}</span><span>${b}</span></span>`;
+const CARDS=[
+ ['Area as a sum','A = πR² = ∫<sub>0</sub><sup>R</sup> 2πr dr','Thin rings of area ≈ 2πr·dr stacked under the line y = 2πr fill a triangle of area ½·R·2πR.','nudge:rings','Circle rings'],
+ ['Derivative',`${fr('df','dx')} = lim<sub>h→0</sub> ${fr('f(x+h) − f(x)','h')}`,'A real ratio of real nudges, then ask what it approaches. Geometrically: the slope of the tangent, the best constant approximation of the rate near a point.','graph:sin','The Graph'],
+ ['Power rule','d(xⁿ)/dx = n·xⁿ⁻¹','Grow a square: two strips x·dx. Grow a cube: three slabs x²·dx. In (x+dx)ⁿ there are n ways to take a single dx.','nudge:cube','x³ cube'],
+ ['Reciprocal','d(1/x)/dx = −1/x²','A puddle of fixed area 1: area gained on the side equals area lost on top.','nudge:puddle','1/x puddle'],
+ ['Trig',`d(sin x)/dx = cos x  ·  d(cos x)/dx = −sin x`,'A small step dθ on the unit circle is the hypotenuse of a tiny triangle similar to the big one with angle θ.','nudge:sine','sin θ'],
+ ['Sum rule','(g + h)′ = g′ + h′','Stack the two heights: the nudges simply add.','graph:cub','The Graph'],
+ ['Product rule','(g·h)′ = g·h′ + h·g′','Box with sides g and h: a nudge adds two strips, g·dh and h·dg. The corner dg·dh is negligible.','nudge:product','Product box'],
+ ['Chain rule',`${fr('d','dx')} g(h(x)) = g′(h(x))·h′(x)`,'Follow a nudge down three number lines: dx forces dh, dh forces dg. The dh cancels for real.','chain:chain','Chain rule'],
+ ['Exponentials','d(aᵗ)/dt = ln(a)·aᵗ  ·  d(eᶜᵗ)/dt = c·eᶜᵗ','aᵗ⁺ᵈᵗ = aᵗ·aᵈᵗ, so slope ∝ height. e is the base where that constant is 1.','limits:exp','e lab'],
+ ['Implicit differentiation','x² + y² = 25  ⇒  2x dx + 2y dy = 0  ⇒  dy/dx = −x/y','Ask which tiny steps (dx, dy) leave S(x, y) unchanged: dS = 0.','chain:implicit','Implicit curves'],
+ ['Natural log','d(ln x)/dx = 1/x','On y = ln x, eʸ = x, so eʸ·dy = dx and dy/dx = 1/eʸ = 1/x.','chain:ln','eʸ = x curve'],
+ ['Related rates','2x·ẋ + 2y·ẏ = 0','The same equation, but every nudge is driven by one nudge in time.','chain:ladder','Ladder'],
+ ['ε–δ limit','∀ε>0 ∃δ>0: 0<|x−a|<δ ⇒ |f(x)−L|<ε','Any output band around L can be met by some input window around a.','limits:eps','ε–δ'],
+ ["L'Hôpital's rule",`f(a)=g(a)=0 ⇒ lim ${fr('f','g')} = ${fr('f′(a)','g′(a)')}`,'Zoomed in, numerator and denominator are lines through (a, 0); their ratio is the ratio of slopes.','limits:lhop',"L'Hôpital"],
+ ['Integral','∫<sub>a</sub><sup>b</sup> f(x) dx = lim<sub>dx→0</sub> Σ f(xᵢ)·dx','Many thin rectangles; dx is both the factor and the spacing. Signed: area below the axis subtracts.','graph:vel','Riemann sums'],
+ ['Fundamental theorem','∫<sub>a</sub><sup>b</sup> f dx = F(b) − F(a),  F′ = f','A nudge to the right edge of the area adds a sliver f(x)·dx, so the area function’s derivative is f. Only the two end points matter.','graph:vel','A(x) layer'],
+ ['Average value',`${fr('1','b − a')} ∫<sub>a</sub><sup>b</sup> f dx = ${fr('F(b) − F(a)','b − a')}`,'Area ÷ width = average height = slope of the antiderivative between the end points.','graph:sin','Average layer'],
+ ['Second derivative',`${fr('d²f','dx²')} = lim ${fr('ddf','dx²')}`,'Change in the change over two equal steps. Positive: bending up (accelerating). Third derivative: jerk.','graph:cub','f″ layer'],
+ ['Taylor polynomial',`f(x) ≈ Σ ${fr('f⁽ⁿ⁾(a)','n!')} (x − a)ⁿ`,'Match value, slope, curvature… at a. The n! cancels the cascade of the power rule. Series may only converge within a radius.','graph:ln','Taylor layer'],
+ ['Stability of fixed points',"|f′(x*)| < 1 ⇒ stable",'The derivative is the local stretch factor: below 1 in size, repeated application squeezes nearby points in.','transform:iter','Iterating 1 + 1/x']
 ];
-const VOICE_PREF_KEY = 'rd-voice';
-
-function addKokoroGroup() {
-  const g = document.createElement('optgroup'); g.label = 'Neural (offline, downloads once)';
-  KOKORO_VOICES.forEach(v => {
-    const o = document.createElement('option');
-    o.value = KOKORO_VOICE_PREFIX + v.id;
-    o.textContent = v.label + ' ◆◆' + (isFileProtocol ? ' (needs http server)' : '');
-    o.disabled = isFileProtocol;
-    g.appendChild(o);
-  });
-  voiceSel.appendChild(g);
-}
-
-function restoreVoicePreference() {
-  const saved = localStorage.getItem(VOICE_PREF_KEY);
-  if (isFileProtocol && saved && saved.startsWith(KOKORO_VOICE_PREFIX)) return; // can't work under file://, keep the auto-picked browser voice
-  if (saved && [...voiceSel.options].some(o => o.value === saved)) voiceSel.value = saved;
-}
-
-function loadVoices() {
-  const all = synth.getVoices();
-  if (!all.length) return;
-  voices = all;
-  const prevValue = voiceSel.value;
-
-  const neural = all.filter(v => /en/i.test(v.lang) && (/neural|natural|enhanced|online|premium|wavenet/i.test(v.name) || v.localService === false));
-  const enRest = all.filter(v => /en/i.test(v.lang) && !neural.includes(v));
-  const other  = all.filter(v => !/en/i.test(v.lang));
-
-  voiceSel.innerHTML = '';
-  const addGrp = (label, list) => {
-    if (!list.length) return;
-    const g = document.createElement('optgroup'); g.label = label;
-    list.forEach(v => {
-      const o = document.createElement('option');
-      o.value = v.name;
-      o.textContent = v.name.replace(/Microsoft |Apple /g,'') + (v.localService === false ? ' ◆' : '');
-      g.appendChild(o);
-    });
-    voiceSel.appendChild(g);
-  };
-  addGrp('Neural / Online ◆', neural);
-  addGrp('English', enRest);
-  addGrp('Other', other);
-  addKokoroGroup();
-
-  if (prevValue && [...voiceSel.options].some(o => o.value === prevValue)) voiceSel.value = prevValue;
-  else restoreVoicePreference();
-
-  updatePlayBtn();
-}
-
-voiceSel.innerHTML = '';
-addKokoroGroup();
-restoreVoicePreference();
-voiceSel.addEventListener('change', () => {
-  localStorage.setItem(VOICE_PREF_KEY, voiceSel.value);
-  updatePlayBtn();
-});
-
-if (synth) {
-  synth.onvoiceschanged = loadVoices;
-  loadVoices();
-  setTimeout(loadVoices, 300);
-  setTimeout(loadVoices, 1000);
-}
-
-function getVoice() {
-  if (!voices.length) return null;
-  return voices.find(v => v.name === voiceSel.value)
-    || voices.find(v => /en/i.test(v.lang) && (/neural|natural|enhanced|online/i.test(v.name) || !v.localService))
-    || voices.find(v => /en/i.test(v.lang))
-    || voices[0];
-}
-
-function currentEngine() {
-  return voiceSel.value.startsWith(KOKORO_VOICE_PREFIX) ? 'kokoro' : 'system';
-}
-
-speedChips.forEach(chip => {
-  chip.addEventListener('click', () => {
-    currentSpeed = parseFloat(chip.dataset.s);
-    speedChips.forEach(c => c.classList.toggle('active', c === chip));
-    if (kokoroAudio) kokoroAudio.playbackRate = currentSpeed;
-  });
-});
-
-// ── Player Controls ────────────────────────────────────────────
-function setStatus(state, keepProgress) {
-  pDot.className = 'p-dot';
-  pLabel.className = '';
-  pFill.className = '';
-  if (state === 'playing') {
-    pDot.classList.add('playing'); pLabel.textContent = 'Playing…';
-    btnPlay.disabled=true; btnPause.disabled=false; btnStop.disabled=false;
-    btnPlay.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M3 2.5a.5.5 0 0 1 .765-.424l10 5.5a.5.5 0 0 1 0 .848l-10 5.5A.5.5 0 0 1 3 13.5v-11z"/></svg> Playing`;
-  } else if (state === 'paused') {
-    pDot.classList.add('paused'); pLabel.textContent = 'Paused';
-    btnPlay.disabled=false; btnPause.disabled=true; btnStop.disabled=false;
-    btnPlay.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M3 2.5a.5.5 0 0 1 .765-.424l10 5.5a.5.5 0 0 1 0 .848l-10 5.5A.5.5 0 0 1 3 13.5v-11z"/></svg> Resume`;
-  } else {
-    pLabel.textContent = 'Ready';
-    btnPlay.disabled  = !canPlay();
-    btnPause.disabled = true; btnStop.disabled = true;
-    btnPlay.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M3 2.5a.5.5 0 0 1 .765-.424l10 5.5a.5.5 0 0 1 0 .848l-10 5.5A.5.5 0 0 1 3 13.5v-11z"/></svg> Play`;
-    if (!keepProgress) { pWord.textContent = ''; pFill.style.width = '0%'; }
-  }
-}
-
-function canPlay() {
-  const hasText = currentMode === 'paste' ? pasteArea.value.trim().length > 0
-                : currentMode === 'doc'   ? !!activeDocId
-                : false;
-  if (!hasText) return false;
-  return currentEngine() === 'kokoro' ? true : voices.length > 0;
-}
-
-function updatePlayBtn() {
-  btnPlay.disabled = !canPlay();
-  btnReadPaste.disabled = !canPlay() || currentMode !== 'paste';
-  btnReadPage.disabled = !canPlay() || currentMode !== 'doc';
-}
-
-// ── Safe Chunking Engine ───────────────────────────────────────
-function stopAll() {
-  const wasActive = synth.speaking || synth.pending || (kokoroAudio && !kokoroAudio.paused);
-  if (synth.speaking || synth.pending) synth.cancel();
-  if (kokoroAudio) {
-    kokoroAudio.onended = null; kokoroAudio.onerror = null; kokoroAudio.onplay = null;
-    kokoroAudio.pause();
-    kokoroAudio = null;
-  }
-
-  isPlaying = false;
-  isPaused = false;
-  speechChunks = [];
-  kokoroChunks = [];
-  kokoroChunkIndex = 0;
-  setStatus('ready');
-  docFrame.querySelectorAll('.su-hl').forEach(n => n.classList.remove('su-hl'));
-  return wasActive;
-}
-
-// Handles race condition where synth.cancel() directly preceding synth.speak() crashes the engine
-function forceSpeak(text) {
-  if (!text.trim()) return;
-  activeEngine = 'system';
-  const wasActive = stopAll();
-  showLoadingFeedback('Starting…');
-  clearTimeout(speakTimeout);
-
-  if (wasActive) {
-    speakTimeout = setTimeout(() => speakText(text), 50);
-  } else {
-    speakText(text);
-  }
-}
-
-// Split text into chunks (~300 chars max) on sentence boundaries to bypass Android/Chrome length limits
-function chunkText(text) {
-  const clean = text.replace(/\s+/g, ' ').trim();
-  if (!clean) return [];
-  const rawChunks = clean.match(/[^.!?\n]+[.!?\n]+/g) || [clean];
-  const chunks = [];
-  let temp = "";
-  for (let part of rawChunks) {
-    if (temp.length + part.length > 250) {
-      if (temp) chunks.push(temp.trim());
-      temp = part;
-    } else {
-      temp += " " + part;
-    }
-  }
-  if (temp) chunks.push(temp.trim());
-  return chunks.filter(Boolean);
-}
-
-function speakText(text) {
-  speechChunks = chunkText(text);
-  if (!speechChunks.length) return;
-  totalTextLength = speechChunks.join(' ').length;
-  chunkIndex = 0;
-  playNextChunk();
-}
-
-function playNextChunk() {
-  if (chunkIndex >= speechChunks.length) {
-    isPlaying = false;
-    isPaused = false;
-    pFill.style.width = '100%';
-    pWord.textContent = '✓ Done';
-    setStatus('ready', true);
-    return;
-  }
-
-  const textChunk = speechChunks[chunkIndex];
-  utterance = new SpeechSynthesisUtterance(textChunk);
-  
-  const voice = getVoice();
-  if (voice) utterance.voice = voice;
-  
-  utterance.rate = currentSpeed;
-  utterance.volume = 1;
-  utterance.pitch = 1.05; // Tiny bump to remove baseline flatness
-
-  utterance.onboundary = e => {
-    if (e.name !== 'word') return;
-    const charsBefore = speechChunks.slice(0, chunkIndex).join(' ').length;
-    const pct = Math.min(((charsBefore + e.charIndex) / totalTextLength) * 100, 100);
-    pFill.style.width = pct.toFixed(1) + '%';
-
-    const slice = textChunk.slice(e.charIndex);
-    const word = slice.split(/\s/)[0];
-    if (word) pWord.textContent = word;
-  };
-
-  utterance.onstart = () => {
-    isPlaying = true;
-    isPaused = false;
-    player.classList.add('visible');
-    setStatus('playing');
-  };
-
-  utterance.onend = () => {
-    if (!isPlaying) return; // Ignore if user manually stopped
-    chunkIndex++;
-    playNextChunk();
-  };
-
-  utterance.onerror = e => {
-    if (e.error === 'interrupted' || e.error === 'canceled' || !isPlaying) return;
-    chunkIndex++;
-    playNextChunk();
-  };
-
-  synth.resume(); // Un-stalls WebKit bugs before firing
-  synth.speak(utterance);
-}
-
-// ── Kokoro (offline neural voice) ──────────────────────────────
-async function getKokoroModule() {
-  if (!kokoroMod) kokoroMod = await import('https://cdn.jsdelivr.net/npm/kokoro-js/+esm');
-  return kokoroMod;
-}
-
-function kokoroDevice() {
-  return navigator.gpu ? 'webgpu' : 'wasm';
-}
-
-async function ensureKokoroReady(mod) {
-  if (kokoroTTS) return kokoroTTS;
-  pDot.className = 'p-dot loading';
-  pLabel.className = 'loading';
-  pLabel.textContent = 'Downloading neural voice (first time only, ~80MB)…';
-  pFill.className = 'indeterminate';
-  const device = kokoroDevice();
-  kokoroTTS = await mod.KokoroTTS.from_pretrained(KOKORO_MODEL_ID, {
-    dtype: device === 'webgpu' ? 'fp32' : 'q8',
-    device,
-    progress_callback: progress => {
-      if (progress.status !== 'progress') return;
-      if (progress.total) {
-        const pct = Math.round(progress.loaded * 100 / progress.total);
-        pFill.className = '';
-        pFill.style.width = pct + '%';
-        pLabel.textContent = `Downloading neural voice… ${pct}%`;
-      } else if (typeof progress.progress === 'number') {
-        pLabel.textContent = `Downloading neural voice… ${Math.round(progress.progress)}%`;
-      }
-    }
-  });
-  pFill.className = '';
-  pFill.style.width = '100%';
-  return kokoroTTS;
-}
-
-function forceSpeakKokoro(text) {
-  if (!text.trim()) return;
-  activeEngine = 'kokoro';
-  stopAll();
-  kokoroChunks = chunkText(text);
-  if (!kokoroChunks.length) return;
-  kokoroTotalLen = kokoroChunks.join(' ').length;
-  kokoroChunkIndex = 0;
-  showLoadingFeedback('Starting…');
-  playNextKokoroChunk();
-}
-
-async function playNextKokoroChunk() {
-  if (activeEngine !== 'kokoro') return;
-
-  if (kokoroChunkIndex >= kokoroChunks.length) {
-    isPlaying = false; isPaused = false;
-    pFill.style.width = '100%'; pWord.textContent = '✓ Done';
-    setStatus('ready', true);
-    return;
-  }
-
-  const voiceId = voiceSel.value.slice(KOKORO_VOICE_PREFIX.length);
-  const chunk = kokoroChunks[kokoroChunkIndex];
-
-  try {
-    const mod = await getKokoroModule();
-    const tts = await ensureKokoroReady(mod);
-    if (activeEngine !== 'kokoro') return;
-
-    pDot.className = 'p-dot loading';
-    pLabel.className = 'loading';
-    pLabel.textContent = 'Synthesizing…';
-    pFill.className = '';
-    const result = await tts.generate(chunk, { voice: voiceId });
-    if (activeEngine !== 'kokoro') return;
-
-    const url = URL.createObjectURL(result.toBlob());
-    kokoroAudio = new Audio(url);
-    kokoroAudio.playbackRate = currentSpeed;
-    kokoroAudio.preservesPitch = true;
-    pWord.textContent = chunk.length > 44 ? chunk.slice(0, 44) + '…' : chunk;
-
-    kokoroAudio.onplay = () => {
-      isPlaying = true; isPaused = false;
-      player.classList.add('visible');
-      setStatus('playing');
-    };
-    kokoroAudio.onended = () => {
-      URL.revokeObjectURL(url);
-      if (activeEngine !== 'kokoro' || !isPlaying) return;
-      const charsBefore = kokoroChunks.slice(0, kokoroChunkIndex + 1).join(' ').length;
-      pFill.style.width = Math.min((charsBefore / kokoroTotalLen) * 100, 100).toFixed(1) + '%';
-      kokoroChunkIndex++;
-      playNextKokoroChunk();
-    };
-    kokoroAudio.onerror = () => {
-      if (activeEngine !== 'kokoro') return;
-      kokoroChunkIndex++;
-      playNextKokoroChunk();
-    };
-
-    await kokoroAudio.play();
-  } catch (err) {
-    console.error('Kokoro TTS failed', err);
-    isPlaying = false; isPaused = false;
-    setStatus('ready', true);
-    pLabel.textContent = 'Neural voice failed — try a Browser voice instead';
-  }
-}
-
-// ── Hook Interactions ──────────────────────────────────────────
-function textForMode() {
-  return currentMode === 'doc' ? getDocText() : pasteArea.value.trim();
-}
-
-function startReading() {
-  const text = textForMode();
-  if (currentEngine() === 'kokoro') forceSpeakKokoro(text);
-  else forceSpeak(text);
-}
-
-// Immediate feedback so a click never looks like it did nothing, even
-// before the (possibly slow) download/synthesis work begins. Call this
-// AFTER stopAll(), which resets the player back to a plain 'ready' state.
-function showLoadingFeedback(label) {
-  player.classList.add('visible');
-  pDot.className = 'p-dot loading';
-  pLabel.className = 'loading';
-  pLabel.textContent = label;
-  pWord.textContent = '';
-  pFill.className = '';
-  pFill.style.width = '0%';
-}
-
-btnPlay.addEventListener('click', () => {
-  if (isPaused) {
-    if (activeEngine === 'kokoro' && kokoroAudio) kokoroAudio.play();
-    else synth.resume();
-    isPaused = false; isPlaying = true; setStatus('playing');
-    return;
-  }
-  startReading();
-});
-
-btnPause.addEventListener('click', () => {
-  if (!isPlaying || isPaused) return;
-  if (activeEngine === 'kokoro' && kokoroAudio) kokoroAudio.pause();
-  else synth.pause();
-  isPaused = true; isPlaying = false; setStatus('paused');
-});
-
-btnStop.addEventListener('click', () => {
-  stopAll();
-});
-
-btnReadPage.addEventListener('click', () => {
-  currentMode = 'doc';
-  player.classList.add('visible');
-  updatePlayBtn();
-  startReading();
-});
-
-btnReadPaste.addEventListener('click', () => {
-  currentMode = 'paste';
-  player.classList.add('visible');
-  updatePlayBtn();
-  startReading();
-});
-
-function getDocText() {
-  const clone = docFrame.cloneNode(true);
-  clone.querySelectorAll('script,style,noscript,nav,header,footer').forEach(n => n.remove());
-  return (clone.innerText || clone.textContent || '').replace(/\s+/g,' ').trim();
-}
-
-// ── Keyboard ───────────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  const tag = document.activeElement?.tagName;
-  if (tag==='TEXTAREA'||tag==='INPUT'||tag==='SELECT') return;
-  if (e.code==='Space') {
-    e.preventDefault();
-    if (isPaused) {
-      if (activeEngine === 'kokoro' && kokoroAudio) kokoroAudio.play(); else synth.resume();
-      isPaused=false; isPlaying=true; setStatus('playing');
-    } else if (isPlaying) {
-      if (activeEngine === 'kokoro' && kokoroAudio) kokoroAudio.pause(); else synth.pause();
-      isPaused=true; isPlaying=false; setStatus('paused');
-    }
-  }
-  if (e.code==='Escape') stopAll();
-});
-
-// ── Paste & Library Setup ──────────────────────────────────────
-pasteArea.addEventListener('input', () => {
-  const words = pasteArea.value.trim().split(/\s+/).filter(Boolean).length;
-  pasteStats.textContent = words ? `${words.toLocaleString()} words` : '0 words';
-  currentMode = 'paste';
-  updatePlayBtn();
-});
-
-btnClipboard.addEventListener('click', async () => {
-  try {
-    const text = await navigator.clipboard.readText();
-    pasteArea.value = text;
-    pasteArea.dispatchEvent(new Event('input'));
-    currentMode = 'paste'; updatePlayBtn();
-  } catch {
-    pasteArea.focus(); document.execCommand('paste');
-  }
-});
-
-btnSaveDoc.addEventListener('click', () => {
-  const text = pasteArea.value.trim();
-  if (!text) return;
-  const name = 'Pasted text — ' + new Date().toLocaleDateString();
-  const html = text.split(/\n{2,}/).map(p => `<p>${p.replace(/\n/g,'<br>')}</p>`).join('');
-  addDoc(name, html);
-  document.querySelector('[data-tab="library"]').click();
-});
-
-function renderLib() {
-  libCount.textContent = library.length
-    ? `${library.length} document${library.length>1?'s':''}` : '0 documents';
-  if (!library.length) {
-    docList.innerHTML = `<div class="lib-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><p>No documents yet.</p></div>`;
-    return;
-  }
-  docList.innerHTML = '';
-  library.forEach(doc => {
-    const el = document.createElement('div');
-    el.className = 'doc-item' + (doc.id === activeDocId ? ' active' : '');
-    el.innerHTML = `<div class="doc-item-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 2h5l3 3v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M9 2v3h3"/></svg></div><div class="doc-item-info"><div class="doc-item-name" title="${doc.name}">${doc.name}</div><div class="doc-item-meta">${doc.date || ''}</div></div><button class="doc-item-del" title="Remove" data-id="${doc.id}">×</button>`;
-    el.addEventListener('click', e => {
-      if (e.target.closest('.doc-item-del')) { removeDoc(doc.id); return; }
-      openDoc(doc.id);
-    });
-    docList.appendChild(el);
-  });
-}
-
-function openDoc(id) {
-  stopAll();
-  const doc = library.find(d => d.id === id);
-  if (!doc) return;
-  activeDocId = id; currentMode = 'doc';
-  readerTitle.textContent = doc.name;
-  docFrame.innerHTML = doc.content;
-  docFrame.querySelectorAll('script,noscript').forEach(n => n.remove());
-  libListView.style.display = 'none';
-  docReader.classList.add('visible');
-  player.classList.add('visible');
-  renderLib(); updatePlayBtn();
-}
-
-function closeDoc() {
-  stopAll();
-  activeDocId = null; currentMode = 'paste';
-  libListView.style.display = 'flex';
-  docReader.classList.remove('visible');
-  player.classList.remove('visible');
-  renderLib(); updatePlayBtn();
-}
-
-function removeDoc(id) {
-  if (activeDocId === id) closeDoc();
-  library = library.filter(d => d.id !== id);
-  saveLib(); renderLib();
-}
-
-function addDoc(name, content) {
-  const id = 'doc-' + Date.now();
-  const date = new Date().toLocaleDateString(undefined, { day:'numeric', month:'short', year:'numeric' });
-  library.unshift({ id, name, content, date });
-  saveLib(); renderLib();
-  return id;
-}
-
-btnBack.addEventListener('click', closeDoc);
-document.getElementById('lib-upload-btn').addEventListener('click', () => fileInput.click());
-
-function handleFile(file) {
-  if (!file) return;
-  const name = file.name;
-  const ext = name.split('.').pop().toLowerCase();
-  showLoadingFeedback('Adding "' + name + '"…');
-  if (ext === 'pdf') {
-    extractPDF(file, name);
-  } else if (ext === 'html' || ext === 'htm') {
-    pFill.className = 'indeterminate';
-    const reader = new FileReader();
-    reader.onload = e => {
-      const parser = new DOMParser();
-      const parsed = parser.parseFromString(e.target.result, 'text/html');
-      parsed.querySelectorAll('script,style,noscript').forEach(n => n.remove());
-      const id = addDoc(name, parsed.body.innerHTML);
-      document.querySelector('[data-tab="library"]').click();
-      openDoc(id);
-    };
-    reader.readAsText(file);
-  }
-}
-
-async function extractPDF(file, name) {
-  pDot.className = 'p-dot loading';
-  pLabel.className = 'loading';
-  pLabel.textContent = 'Loading PDF reader…';
-  pFill.className = 'indeterminate';
-  player.classList.add('visible');
-  try {
-    const mod = await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.9.155/+esm');
-    mod.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.9.155/build/pdf.worker.min.mjs';
-    const url = URL.createObjectURL(file);
-    const pdf = await mod.getDocument(url).promise;
-    pFill.className = '';
-    let html = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const ct = await page.getTextContent();
-      html += `<p>${ct.items.map(it => it.str).join(' ')}</p>`;
-      pLabel.textContent = `Reading PDF… page ${i} of ${pdf.numPages}`;
-      pFill.style.width = Math.round(i * 100 / pdf.numPages) + '%';
-    }
-    URL.revokeObjectURL(url);
-    const id = addDoc(name, html || '<p>No text found.</p>');
-    document.querySelector('[data-tab="library"]').click();
-    openDoc(id);
-  } catch {
-    const id = addDoc(name, `<p style="color:#f87171">Could not extract text.</p>`);
-    document.querySelector('[data-tab="library"]').click();
-    openDoc(id);
-  }
-}
-
-fileInput.addEventListener('change', () => { if (fileInput.files[0]) { handleFile(fileInput.files[0]); fileInput.value=''; } });
-document.getElementById('dz-btn').addEventListener('click', () => fileInput.click());
-const dz = document.getElementById('drop-zone');
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
-
-// ── Init ───────────────────────────────────────────────────────
-renderLib();
-if (library.length) updatePlayBtn();
+$('#sheet').innerHTML=CARDS.map(([tag,f,p,go,lab])=>`<article class="card"><div class="tag">${tag}</div><div class="f">${f}</div><p>${p}</p><a href="#${go.split(':')[0]}" data-go="${go}">Open in ${lab} →</a></article>`).join('');
+$('#sheet').addEventListener('click',e=>{const a=e.target.closest('a[data-go]');if(!a)return;e.preventDefault();const[v,m]=a.dataset.go.split(':');pendingMode=m;if(location.hash==='#'+v)route();else location.hash=v});
+})();
+
+/* ================= routing ================= */
+let pendingMode=null;
+const VIEWS=['graph','nudge','chain','limits','transform','sheet'];
+function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='graph';
+  document.querySelectorAll('section.lab').forEach(s=>s.hidden=s.dataset.view!==v);
+  document.querySelectorAll('nav.tabs a').forEach(a=>a.setAttribute('aria-current',a.dataset.view===v?'page':'false'));
+  if(SETMODE[v]){SETMODE[v](pendingMode)}pendingMode=null;window.scrollTo({top:0});
+  requestAnimationFrame(()=>PLOTS.forEach(p=>p.resize()))}
+window.addEventListener('hashchange',route);route();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>PLOTS.forEach(p=>p.render()));
 </script>
-</body>
-</html>
+
+</body></html>
