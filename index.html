@@ -1,11 +1,15 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Calculus Nudge Lab</title>
+<title>Math Player</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: sticky lab switcher; each lab = live canvas (left) + control/readout panel (right), notes underneath. Dark chalkboard world by choice. */
+/* Math Player. Labs are grouped by domain in the sticky switcher.
+   HOW TO ADD A LAB: (1) add <section class="lab" data-view="id" data-domain="Domain" data-title="Tab name" hidden> before the Formula Map;
+   (2) add an IIFE that builds it with the shared helpers (Plot, slider, segment, toggle, readout, group) and sets SETMODE.id = mode => {...};
+   (3) optionally add cards to the Formula Map with data-go="id:mode". The tab bar and routing pick it up automatically.
+   Layout: sticky lab switcher; each lab = live canvas (left) + control/readout panel (right), notes underneath. Dark chalkboard world by choice. */
 :root{
   color-scheme: dark;
   --bg:#0a0c0f;
@@ -139,26 +143,47 @@ dl.read dt.sep,dl.read dd.sep{border-top:1px dashed var(--line);padding-top:6px;
   .hint{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+/* domain-grouped navigation */
+nav.tabs{align-items:center}
+nav.tabs .dom{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:600;padding:0 2px 0 14px;white-space:nowrap;border-left:1px solid var(--line);margin-left:6px}
+nav.tabs .dom:first-child{padding-left:0;border-left:0;margin-left:0}
+a.xlink{color:var(--blue);text-decoration:none;border-bottom:1px solid rgba(88,196,221,.4)}
+a.xlink:hover{border-color:var(--blue)}
+
+/* LAB: the open box */
+.box-stage canvas{cursor:grab}
+.box-stage canvas:active{cursor:grabbing}
+.b-labels{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:8px}
+.b-labels span{position:absolute;transform:translate(-50%,-50%);white-space:nowrap}
+.b-labels .ax{font-family:var(--f-math);font-style:italic;font-size:17px;color:var(--ink)}
+.b-labels .tk{font:10.5px var(--f-mono);color:var(--faint)}
+.b-formula{position:absolute;left:14px;top:12px;font-family:var(--f-math);font-style:italic;font-size:17px;color:var(--blue);pointer-events:none;max-width:55%}
+.b-cbar{position:absolute;right:16px;top:54%;transform:translateY(-50%);width:12px;height:50%;border-radius:3px;border:1px solid var(--line)}
+.b-cbt{position:absolute;right:34px;font:10.5px var(--f-mono);color:var(--dim);transform:translateY(-50%);pointer-events:none}
+.b-cbm{position:absolute;right:29px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid var(--ink);transform:translateY(-50%);pointer-events:none}
+.b-fail{position:absolute;left:16px;right:16px;top:45%;color:var(--dim);text-align:center}
+.b-panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:16px}
+.b-pnl{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.b-pnl h4{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);font-weight:600}
+.b-pnl p{margin:0;color:var(--dim);font-size:13px}
+.b-pnl canvas{display:block;width:100%;height:230px;background:var(--stage);border:1px solid var(--line);border-radius:6px}
+.b-key{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+.b-key i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+@media (max-width:560px){.b-cbar,.b-cbt,.b-cbm{display:none}.b-formula{max-width:none;top:auto;bottom:10px}}
+@media (max-width:1500px){.brand span{display:none}}
 </style>
 
 <header class="top">
   <div class="wrap">
-    <div class="brand"><b>Calculus <i>Nudge</i> Lab</b><span>Essence of Calculus · trainer</span></div>
-    <nav class="tabs" aria-label="Labs">
-      <a href="#graph" data-view="graph">The Graph</a>
-      <a href="#nudge" data-view="nudge">Nudge Geometry</a>
-      <a href="#chain" data-view="chain">Chains &amp; Constraints</a>
-      <a href="#limits" data-view="limits"><i>e</i> &amp; Limits</a>
-      <a href="#transform" data-view="transform">Transformations</a>
-      <a href="#sheet" data-view="sheet">Formula Map</a>
-    </nav>
+    <div class="brand"><b>Math <i>Player</i></b><span>visualiser · trainer</span></div>
+    <nav class="tabs" aria-label="Labs" id="tabs"></nav>
   </div>
 </header>
 
 <main class="wrap">
 
 <!-- =============== GRAPH =============== -->
-<section class="lab" data-view="graph" hidden>
+<section class="lab" data-view="graph" data-domain="Calculus" data-title="The Graph" hidden>
   <div class="lab-head">
     <div>
       <p class="eyebrow">Derivative · integral · FTC · average · f″ · Taylor</p>
@@ -203,7 +228,7 @@ dl.read dt.sep,dl.read dd.sep{border-top:1px dashed var(--line);padding-top:6px;
 </section>
 
 <!-- =============== NUDGE =============== -->
-<section class="lab" data-view="nudge" hidden>
+<section class="lab" data-view="nudge" data-domain="Calculus" data-title="Nudge Geometry" hidden>
   <div class="lab-head">
     <div>
       <p class="eyebrow">Area of a circle · power rule · 1/x · sine · product rule</p>
@@ -236,7 +261,7 @@ dl.read dt.sep,dl.read dd.sep{border-top:1px dashed var(--line);padding-top:6px;
 </section>
 
 <!-- =============== CHAIN =============== -->
-<section class="lab" data-view="chain" hidden>
+<section class="lab" data-view="chain" data-domain="Calculus" data-title="Chains &amp; Constraints" hidden>
   <div class="lab-head">
     <div>
       <p class="eyebrow">Chain rule · implicit differentiation · related rates · d(ln x)</p>
@@ -253,7 +278,7 @@ dl.read dt.sep,dl.read dd.sep{border-top:1px dashed var(--line);padding-top:6px;
 </section>
 
 <!-- =============== LIMITS =============== -->
-<section class="lab" data-view="limits" hidden>
+<section class="lab" data-view="limits" data-domain="Calculus" data-title="&lt;i&gt;e&lt;/i&gt; &amp; Limits" hidden>
   <div class="lab-head">
     <div>
       <p class="eyebrow">Exponentials · ε–δ limits · L'Hôpital</p>
@@ -270,7 +295,7 @@ dl.read dt.sep,dl.read dd.sep{border-top:1px dashed var(--line);padding-top:6px;
 </section>
 
 <!-- =============== TRANSFORM =============== -->
-<section class="lab" data-view="transform" hidden>
+<section class="lab" data-view="transform" data-domain="Calculus" data-title="Transformations" hidden>
   <div class="lab-head">
     <div>
       <p class="eyebrow">The derivative without a graph</p>
@@ -286,13 +311,62 @@ dl.read dt.sep,dl.read dd.sep{border-top:1px dashed var(--line);padding-top:6px;
   <div class="notes" id="t-notes"></div>
 </section>
 
+<!-- =============== OPEN BOX (Dimensions) =============== -->
+<section class="lab" data-view="box" data-domain="Dimensions" data-title="Open Box" hidden>
+  <div class="lab-head">
+    <div>
+      <p class="eyebrow">Surfaces · slices · projections · contours · small multiples</p>
+      <h2>One surface, <em>every</em> flat view</h2>
+      <p class="lede">A function of two inputs needs three dimensions and a screen has two. Every flat picture of it gives one dimension up, in one of four ways: fix it (a slice), squash it (a projection), look down on it (a contour map), or lay many slices side by side (small multiples). Here all four come from the same surface, live.</p>
+    </div>
+    <div class="seg" id="b-preset"></div>
+  </div>
+  <div class="lab-body">
+    <div class="stage box-stage" id="b-stage">
+      <div class="b-labels" id="b-labels"></div>
+      <div class="b-formula" id="b-formula"></div>
+      <div class="stage-tools">
+        <button class="btn" type="button" id="b-v3d">3D</button>
+        <button class="btn" type="button" id="b-vtop">Top: contour map</button>
+        <button class="btn" type="button" id="b-vwall">Face the wall: 2D plot</button>
+      </div>
+      <div class="b-cbar" id="b-cbar"></div>
+      <span class="b-cbt" id="b-cbhi"></span><span class="b-cbt" id="b-cbmid"></span><span class="b-cbt" id="b-cblo"></span>
+      <span class="b-cbm" id="b-cbmark" hidden></span>
+      <div class="hint">drag to rotate · scroll to zoom · click the surface to move the slice there</div>
+    </div>
+    <aside class="panel" id="pn-box"></aside>
+  </div>
+  <div class="b-panels">
+    <div class="b-pnl">
+      <h4>The wall, flattened</h4>
+      <p>The ordinary 2D plot. The same picture you get from “Face the wall”.</p>
+      <canvas id="b-wall" aria-label="Slice and projection drawn as a 2D plot"></canvas>
+      <div class="b-key"><span><i style="background:var(--yellow)"></i>slice</span><span><i style="background:var(--teal)"></i>projection</span><span><i style="background:var(--dim)"></i>slice family</span></div>
+    </div>
+    <div class="b-pnl">
+      <h4>Top view</h4>
+      <p>Colour is height. Lines join equal heights; blue is height 0.</p>
+      <canvas id="b-top" aria-label="Heatmap and contour lines seen from above"></canvas>
+      <div class="b-key"><span><i style="background:var(--yellow)"></i>where the slice cuts</span><span><i style="background:var(--ink)"></i>cursor</span></div>
+    </div>
+    <div class="b-pnl">
+      <h4>Small multiples</h4>
+      <p>Six slices side by side on one shared scale. Click one to jump there.</p>
+      <canvas id="b-sm" aria-label="Small multiples of slices"></canvas>
+      <div class="seg" id="b-smseg"></div>
+    </div>
+  </div>
+  <div class="notes" id="b-notes"></div>
+</section>
+
 <!-- =============== SHEET =============== -->
-<section class="lab" data-view="sheet" hidden>
+<section class="lab" data-view="sheet" data-domain="Reference" data-title="Formula Map" hidden>
   <div class="lab-head">
     <div>
       <p class="eyebrow">Every formula, with its picture</p>
       <h2>Formula map</h2>
-      <p class="lede">The formulas still matter. Each card states one, gives the picture that produces it, and opens the visualiser where you can rebuild it.</p>
+      <p class="lede">The formulas still matter. Each card states one, gives the picture that produces it, and opens the lab where you can rebuild it. Cards from every domain live here.</p>
     </div>
   </div>
   <div class="sheet" id="sheet"></div>
@@ -300,6 +374,8 @@ dl.read dt.sep,dl.read dd.sep{border-top:1px dashed var(--line);padding-top:6px;
 
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 /* ================= core ================= */
 const $=s=>document.querySelector(s);
@@ -626,7 +702,7 @@ const NOTES={
  chain:[['The picture',[`Three number lines: <span class="m">x</span>, then <span class="m">h = h(x)</span>, then <span class="m">g(h)</span>. A nudge <span class="m">dx</span> on the top line forces a nudge <span class="m">dh ≈ h′(x)·dx</span> on the middle line.`,`The middle nudge forces <span class="m">dg ≈ g′(h)·dh</span> on the bottom line. You can only measure the bottom nudge in terms of <span class="m">dh</span> first, which is why the outer derivative is taken <em>with respect to h</em> and evaluated at <span class="m">h(x)</span>.`,`<span class="eq">dg/dx = (dg/dh)·(dh/dx)</span>. The cancelling <span class="m">dh</span> is a real cancellation of real nudges, not notation.`]],
   ['Try',[`Default <span class="m">sin(x²)</span>: put <span class="m">x</span> near 2.2. The middle nudge goes right but the bottom one goes left, because <span class="m">cos(h)</span> is negative there.`,`Choose inner <span class="m">3x</span>: the middle line stretches every nudge by exactly 3.`,`Drag on the top line to move <span class="m">x</span>.`]]],
  implicit:[['The picture',[`The background colours the value of <span class="m">S(x, y)</span> = left side − right side. The bright curve is where <span class="m">S = 0</span>.`,`Any tiny step <span class="m">(dx, dy)</span> changes <span class="m">S</span> by <span class="m">dS ≈ Sₓ·dx + S_y·dy</span>. "Taking the derivative of both sides" means computing this.`,`A step stays on the curve when <span class="m">dS = 0</span>. Solving gives the slope <span class="m">dy/dx = −Sₓ/S_y</span>, which is <span class="m">−x/y</span> on the circle.`,`On <span class="m">eʸ = x</span>: <span class="m">eʸ·dy = dx</span>, so <span class="m">dy/dx = 1/eʸ = 1/x</span>. That is the derivative of <span class="m">ln x</span>.`]],
-  ['Try',[`Drag the arrow head off the tangent direction: predicted and actual <span class="m">dS</span> both move away from 0.`,`Press <b>Make step keep dS = 0</b>: the step lines up with the tangent. Make the step short and it hugs the curve.`,`Drag the point to (3, 4) on the circle: slope −0.75.`]]],
+  ['Try',[`Drag the arrow head off the tangent direction: predicted and actual <span class="m">dS</span> both move away from 0.`,`Press <b>Make step keep dS = 0</b>: the step lines up with the tangent. Make the step short and it hugs the curve.`,`Drag the point to (3, 4) on the circle: slope −0.75.`,`Open <a class="xlink" href="#box" data-go="box:circle">the same S(x, y) as a surface</a>. The coloured background here is its top view, and the bright curve is its contour at height 0.`]]],
  ladder:[['The picture',[`A 5 m ladder: <span class="m">x(t)² + y(t)² = 5²</span> at every moment, so the left side is a function of time that never changes. Its time derivative is 0.`,`<span class="eq">2x·dx/dt + 2y·dy/dt = 0</span>, so <span class="m">dx/dt = −(y/x)·dy/dt</span>.`,`Same equation as the circle, but here every nudge is caused by a common nudge <span class="m">dt</span> in time. Implicit differentiation is this, minus the clock.`]],
   ['Try',[`At the start (x = 3, y = 4, top falling at 1 m/s) the foot slides out at 4/3 m/s.`,`Let it slide. As <span class="m">y → 0</span> the foot's speed blows up: the model's assumption that the top stays on the wall breaks before that.`]]]
 };
@@ -872,10 +948,15 @@ const CARDS=[
  ['Average value',`${fr('1','b − a')} ∫<sub>a</sub><sup>b</sup> f dx = ${fr('F(b) − F(a)','b − a')}`,'Area ÷ width = average height = slope of the antiderivative between the end points.','graph:sin','Average layer'],
  ['Second derivative',`${fr('d²f','dx²')} = lim ${fr('ddf','dx²')}`,'Change in the change over two equal steps. Positive: bending up (accelerating). Third derivative: jerk.','graph:cub','f″ layer'],
  ['Taylor polynomial',`f(x) ≈ Σ ${fr('f⁽ⁿ⁾(a)','n!')} (x − a)ⁿ`,'Match value, slope, curvature… at a. The n! cancels the cascade of the power rule. Series may only converge within a radius.','graph:ln','Taylor layer'],
- ['Stability of fixed points',"|f′(x*)| < 1 ⇒ stable",'The derivative is the local stretch factor: below 1 in size, repeated application squeezes nearby points in.','transform:iter','Iterating 1 + 1/x']
+ ['Stability of fixed points',"|f′(x*)| < 1 ⇒ stable",'The derivative is the local stretch factor: below 1 in size, repeated application squeezes nearby points in.','transform:iter','Iterating 1 + 1/x'],
+ [`Slice`,`z = f(x, y₀)`,`Fix one input and read height against the other. Every ordinary 2D graph of a two-input function is one slice; a slider moves it.`,'box:product','Open Box'],
+ [`Projection (marginal)`,`m(x) = ${fr('1','2L')} ∫<sub>−L</sub><sup>L</sup> f(x, y) dy`,`Squash an input away by averaging along it. It keeps each variable's own spread and loses how they move together.`,'box:gauss','Joint distribution'],
+ [`Shadow projection`,`s(x) = max<sub>y</sub> f(x, y)`,`Keep the tallest point along each line of sight: the outline the surface casts on the wall. Always at least as tall as any slice.`,'box:ripple','Ripple'],
+ [`Level set`,`{ (x, y) : f(x, y) = c }`,`A contour on the floor. An implicit curve S(x, y) = 0 is the level set at height 0 of the surface S.`,'box:circle','Implicit circle'],
+ [`Conditional mean`,`E[x | y] = ρ·y`,`For a bivariate normal each slice is a bell, and its peak slides along x = ρy as the slice moves: the regression line.`,'box:gauss','Joint distribution']
 ];
 $('#sheet').innerHTML=CARDS.map(([tag,f,p,go,lab])=>`<article class="card"><div class="tag">${tag}</div><div class="f">${f}</div><p>${p}</p><a href="#${go.split(':')[0]}" data-go="${go}">Open in ${lab} →</a></article>`).join('');
-$('#sheet').addEventListener('click',e=>{const a=e.target.closest('a[data-go]');if(!a)return;e.preventDefault();const[v,m]=a.dataset.go.split(':');pendingMode=m;if(location.hash==='#'+v)route();else location.hash=v});
+document.addEventListener('click',e=>{const a=e.target.closest('a[data-go]');if(!a)return;e.preventDefault();const[v,m]=a.dataset.go.split(':');pendingMode=m;if(location.hash==='#'+v)route();else location.hash=v});
 })();
 
 /* ================= VALUE PLANE (product rule, second view) ================= */
@@ -988,7 +1069,8 @@ $('#pl-notes').innerHTML=`<div class="note"><h4>What that explanation is saying,
 <li><b>price × sales</b>: each week the price drops 50p and sales rise by 600 units. The red strip <span class="m">q·dp</span> is money lost on customers you already had. The teal strip <span class="m">p·dq</span> is money from new customers. Drag <span class="m">t</span>: revenue peaks at about 4.17 weeks, where the strips balance and the route just touches a contour line.</li>
 <li><b>sin x · x²</b>: drag past <span class="m">x = π</span>. <span class="m">sin x</span> goes negative, the box crosses to the left and its area turns red. The box above moves in step.</li>
 <li><b>cos x · sin x</b>: the route is the unit circle. The product peaks at <span class="m">x = π/4</span>, where the circle touches the <span class="m">P = ½</span> contour.</li>
-<li>Press <b>Shrink → 0</b> and watch the dashed marker slide left on the log chart.</li></ul></div>`;
+<li>Press <b>Shrink → 0</b> and watch the dashed marker slide left on the log chart.</li>
+<li><a class="xlink" href="#box" data-go="box:product">See the value plane in 3D</a>: lift every point to the height <span class="m">u·v</span> and you get a saddle. The faint hyperbolas here are its floor contours.</li></ul></div>`;
 const ps=segment($('#pl-pair'),Object.entries(PAIRS).map(([k,o])=>[k,o.l]),Q.k,k=>{Q.k=k;Q.x=PAIRS[k].x;Q.dx=PAIRS[k].dx;bg=null;buildControls();sync();up()});
 function nearest(px,py){const P=PAIRS[Q.k];let best={d:1e9,x:Q.x};for(let i=0;i<=900;i++){const x=P.r[0]+(P.r[1]-P.r[0])*i/900;const d=Math.hypot(B.X(P.u(x))-px,B.Y(P.v(x))-py);if(d<best.d)best={d,x}}return best}
 pointer(p2.cv,{down(x,y){if(!B)return null;return nearest(x,y).d<32?'pt':null},move(t,x,y){sX.set(nearest(x,y).x)}});
@@ -996,13 +1078,323 @@ function up(){p2.render();p3.render()}
 buildControls();up();
 })();
 
+
+/* ================= LAB 6: THE OPEN BOX (domain: Dimensions) ================= */
+(()=>{
+const stage=$('#b-stage'),pn=$('#pn-box');
+if(!window.THREE||!THREE.OrbitControls){stage.style.minHeight='360px';stage.insertAdjacentHTML('beforeend','<div class="b-fail">The 3D library did not load, so this lab cannot run. Check the connection and reload the page.</div>');SETMODE.box=()=>{};window.BOXLAB={setActive(){}};return}
+
+/* ---- colour maps ---- */
+const CM={coolwarm:[[0,[.230,.299,.754]],[.25,[.552,.690,.996]],[.5,[.866,.866,.866]],[.75,[.956,.604,.486]],[1,[.706,.016,.150]]],
+  viridis:[[0,[.267,.005,.329]],[.25,[.229,.322,.546]],[.5,[.128,.567,.551]],[.75,[.369,.789,.383]],[1,[.993,.906,.144]]]};
+function cmap(t){t=clamp(t,0,1);const st=CM[S.cmap];for(let i=1;i<st.length;i++)if(t<=st[i][0]){const[t0,c0]=st[i-1],[t1,c1]=st[i],u=(t-t0)/(t1-t0);return[c0[0]+(c1[0]-c0[0])*u,c0[1]+(c1[1]-c0[1])*u,c0[2]+(c1[2]-c0[2])*u]}return st[st.length-1][1]}
+const rgbS=c=>`rgb(${Math.round(c[0]*255)},${Math.round(c[1]*255)},${Math.round(c[2]*255)})`;
+
+/* ---- surfaces ---- */
+const PR={
+ ripple:{l:'Ripple',formula:'z = sin(k·r)',L:5,axes:['x','y','z'],param:{n:'k',min:.3,max:2,step:.01,def:1},cmap:'coolwarm',
+  f:(x,y,k)=>Math.sin(k*Math.hypot(x,y)),
+  tips:[`Set projection to <b>Shadow</b>. The wall now shows the outline the surface would cast if lit from the front.`,
+        `Move the slice. The yellow curve only touches that outline where the slice passes through the highest ridge. A shadow is always at least as tall as any slice.`,
+        `Drag <span class="m">k</span> up. More rings fit in the box and the <b>average</b> projection flattens, because peaks and troughs cancel along each line of sight.`]},
+ product:{l:'y = a·x',formula:'y = a·x,  with a on its own axis',L:3,axes:['x','a','y'],param:null,cmap:'coolwarm',
+  f:(x,a)=>a*x,
+  tips:[`The yellow line is one graph of <span class="m">y = a·x</span>, for one value of <span class="m">a</span>. Click anywhere on the surface to choose a different <span class="m">a</span>.`,
+        `Turn on <b>slice family</b>. The straight lines are the grain of the surface. Every 2D plot you have drawn of <span class="m">y = a·x</span> is one of them, and a slider is just this slice moving.`,
+        `Press <b>Top</b>. The floor contours are the hyperbolas <span class="m">a·x = c</span>. Rename <span class="m">x, a</span> as <span class="m">u, v</span> and this is the <a class="xlink" href="#nudge" data-go="nudge:product">value plane</a> from the product rule.`]},
+ gauss:{l:'Joint distribution',formula:'bivariate normal, correlation ρ',L:3,axes:['x','y','p'],param:{n:'ρ',min:-.9,max:.9,step:.01,def:.6},cmap:'viridis',
+  f:(x,y,r)=>{const q=1-r*r;return Math.exp(-(x*x-2*r*x*y+y*y)/(2*q))/(2*PI*Math.sqrt(q))},
+  tips:[`Drag <span class="m">ρ</span>. The hill tilts and the yellow slice slides sideways, yet both teal projections stay exactly where they are.`,
+        `A projection (a marginal) keeps each variable's own spread and throws away how the two move together. Correlation lives only in the joint surface and its slices.`,
+        `Keep <b>Fix y</b> and sweep the slice. The peak of each slice moves along <span class="m">x = ρ·y</span>: the conditional mean, which is the regression line.`]},
+ saddle:{l:'Saddle',formula:'z = x² − k·y²',L:2,axes:['x','y','z'],param:{n:'k',min:-1,max:1,step:.01,def:1},cmap:'coolwarm',
+  f:(x,y,k)=>x*x-k*y*y,
+  tips:[`Drag <span class="m">k</span> through 0: bowl, then trough, then saddle.`,
+        `With <b>Fix y</b> the slice keeps its shape and only moves up or down as <span class="m">k</span> changes. Switch to <b>Fix x</b> and the same drag flips the parabola over.`,
+        `At <span class="m">k = 1</span>, look at the blue zero level: height 0 is two crossing lines, <span class="m">y = ±x</span>.`]},
+ peaks:{l:'Two peaks',formula:'two bumps at x = ±d',L:3,axes:['x','y','z'],param:{n:'d',min:0,max:2.2,step:.01,def:1.2},cmap:'viridis',
+  f:(x,y,d)=>Math.exp(-((x-d)*(x-d)+y*y)/.9)+Math.exp(-((x+d)*(x+d)+y*y)/.9),
+  tips:[`The <span class="m">x–z</span> wall shows two bumps. The <span class="m">y–z</span> wall shows one at every <span class="m">d</span>, because looking along <span class="m">x</span> the peaks stand one behind the other.`,
+        `A projection cannot separate anything lined up along its own direction. Rotate the box and ask which wall would have warned you there were two peaks.`]},
+ circle:{l:'Implicit circle',formula:'S = x² + y² − r²',L:7,axes:['x','y','S'],param:{n:'r',min:1,max:6.5,step:.01,def:5},cmap:'coolwarm',
+  f:(x,y,r)=>x*x+y*y-r*r,
+  tips:[`This is <span class="m">S(x, y)</span> = left side − right side of <span class="m">x² + y² = r²</span>. The blue contour is where <span class="m">S = 0</span>: the circle itself, as the level set at height 0.`,
+        `Press <b>Top</b> with the floor on <b>Heatmap</b>. That is the coloured background of <a class="xlink" href="#chain" data-go="chain:implicit">Implicit curves</a>: the same surface, seen from above.`,
+        `Slice at <span class="m">y = 0</span>. The yellow parabola crosses height 0 at <span class="m">x = ±r</span>. Implicit differentiation asks which steps along the floor keep you on that crossing.`]}
+};
+const ORDER=['ripple','product','gauss','saddle','peaks','circle'];
+const PIECES=[
+ `<b>Surface</b>: the whole function. Every pair of inputs and its height, at once.`,
+ `<b style="color:var(--yellow)">Slice</b>: fix one input and read height against the other. Every ordinary 2D plot of a two-input function is one of these. In probability it is a conditional.`,
+ `<b style="color:var(--teal)">Projection</b>: remove one input completely by pushing every point onto the back wall. <b>Average</b> keeps the typical height (in probability, the marginal). <b>Shadow</b> keeps the tallest.`,
+ `<b>Floor</b>: the surface seen from straight above. A contour joins points at equal height; <b style="color:var(--blue)">blue</b> is height 0.`,
+ `<b>Small multiples</b>: slices placed side by side instead of animated, on one shared scale so they can be compared by eye.`,
+ `<b>Sweep</b>: the fourth way to give up a dimension, by trading it for time. A slider is a slice that moves.`];
+
+/* ---- state ---- */
+const S={k:'ripple',p:1,axis:'y',s:.3,proj:'avg',floor:'contours',cmap:'coolwarm',mesh:true,rays:true,family:false,zero:true,sm:'slice',sweepS:false,sweepP:false,hover:null};
+let P=PR.ripple,LO=-1,HI=1;const HB=.72,N=90,FAM=[-5/6,-.5,-1/6,1/6,.5,5/6];
+const fz=(v,d)=>Math.abs(v)<(HI-LO)*1e-4?'0':fmt(v,d);
+const zS=z=>-HB+(z-LO)/(HI-LO)*2*HB;
+const tOf=z=>(S.cmap==='coolwarm'&&LO<0&&HI>0)?.5+.5*z/Math.max(-LO,HI):(z-LO)/(HI-LO);
+const F=(x,y)=>P.f(x,y,S.p);
+const fixedN=()=>S.axis==='y'?P.axes[1]:P.axes[0], freeN=()=>S.axis==='y'?P.axes[0]:P.axes[1];
+function range(pr){let lo=Infinity,hi=-Infinity;const ps=pr.param?[pr.param.min,(pr.param.min+pr.param.max)/2,pr.param.max,pr.param.def]:[0];
+  for(const p of ps)for(let i=0;i<=50;i++)for(let j=0;j<=50;j++){const v=pr.f(-pr.L+2*pr.L*i/50,-pr.L+2*pr.L*j/50,p);if(v<lo)lo=v;if(v>hi)hi=v}
+  if(hi-lo<1e-9){lo-=1;hi+=1}return[lo,hi]}
+
+/* ---- three.js scene ---- */
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setClearColor(new THREE.Color(K.stage));
+const cv=renderer.domElement;cv.setAttribute('aria-label','3D box: surface, slice and projections');stage.prepend(cv);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(38,1,.05,100);camera.up.set(0,0,1);
+const HOME=new THREE.Vector3(3.3,-3.65,2.3);camera.position.copy(HOME);
+const controls=new THREE.OrbitControls(camera,cv);
+controls.enableDamping=true;controls.dampingFactor=.08;controls.minDistance=2.2;controls.maxDistance=9;controls.maxPolarAngle=PI*.6;controls.enablePan=false;
+scene.add(new THREE.HemisphereLight(0xffffff,0x3a4658,.82));
+const dl=new THREE.DirectionalLight(0xffffff,.55);dl.position.set(2,-3,4);scene.add(dl);
+
+const quadGeo=c=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute([...c[0],...c[1],...c[2],...c[0],...c[2],...c[3]],3));return g};
+const segGeo=a=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(a,3));return g};
+const paneMat=new THREE.MeshBasicMaterial({color:'#0b0f14',side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:2});
+const gridMat=new THREE.LineBasicMaterial({color:K.blue,transparent:true,opacity:.13});
+const edgeMat=new THREE.LineBasicMaterial({color:K.ink,transparent:true,opacity:.22});
+function pane(c,grid){const g=new THREE.Group();g.add(new THREE.Mesh(quadGeo(c),paneMat));g.add(new THREE.LineSegments(segGeo(grid),gridMat));
+  g.add(new THREE.LineSegments(segGeo([...c[0],...c[1],...c[1],...c[2],...c[2],...c[3],...c[3],...c[0]]),edgeMat));return g}
+const gF=[],gY=[],gX=[];
+for(let k=0;k<=4;k++){const u=-1+k*.5,w=-HB+k*HB/2;gF.push(u,-1,0,u,1,0,-1,u,0,1,u,0);gY.push(u,0,-HB,u,0,HB,-1,0,w,1,0,w);gX.push(0,u,-HB,0,u,HB,0,-1,w,0,1,w)}
+const floor=pane([[-1,-1,0],[1,-1,0],[1,1,0],[-1,1,0]],gF);floor.position.z=-HB;
+const yWall=pane([[-1,0,-HB],[1,0,-HB],[1,0,HB],[-1,0,HB]],gY);   // the x–z wall
+const xWall=pane([[0,-1,-HB],[0,1,-HB],[0,1,HB],[0,-1,HB]],gX);   // the y–z wall
+scene.add(floor,yWall,xWall);let xSide=0,ySide=0;
+
+const sGeo=new THREE.PlaneGeometry(2,2,N,N);sGeo.setAttribute('color',new THREE.Float32BufferAttribute(new Float32Array((N+1)*(N+1)*3),3));
+const surface=new THREE.Mesh(sGeo,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));scene.add(surface);
+const meshLines=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:K.stage,transparent:true,opacity:.4}));scene.add(meshLines);
+const hGeo=new THREE.PlaneGeometry(2,2,N,N);hGeo.setAttribute('color',new THREE.Float32BufferAttribute(new Float32Array((N+1)*(N+1)*3),3));
+const heat=new THREE.Mesh(hGeo,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));heat.position.z=.001;floor.add(heat);
+const contours=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({vertexColors:true}));contours.position.z=.003;floor.add(contours);
+const zeroMat=new THREE.LineBasicMaterial({color:K.blue});
+const zeroFloor=new THREE.LineSegments(new THREE.BufferGeometry(),zeroMat);zeroFloor.position.z=.005;floor.add(zeroFloor);
+const zeroSurf=new THREE.LineSegments(new THREE.BufferGeometry(),zeroMat);scene.add(zeroSurf);
+let contourCache=[],zeroCache=[];
+
+const sliceGroup=new THREE.Group();
+sliceGroup.add(new THREE.Mesh(quadGeo([[-1,0,-HB],[1,0,-HB],[1,0,HB],[-1,0,HB]]),new THREE.MeshBasicMaterial({color:K.yellow,transparent:true,opacity:.08,side:THREE.DoubleSide,depthWrite:false})));
+sliceGroup.add(new THREE.LineSegments(segGeo([-1,0,-HB,1,0,-HB,1,0,-HB,1,0,HB,1,0,HB,-1,0,HB,-1,0,HB,-1,0,-HB]),new THREE.LineBasicMaterial({color:K.yellow,transparent:true,opacity:.5})));
+scene.add(sliceGroup);
+const yelMat=new THREE.MeshBasicMaterial({color:K.yellow}),tealMat=new THREE.MeshBasicMaterial({color:K.teal});
+const tubes={};
+function setTube(key,parent,pts,r,mat){const o=tubes[key];if(o){o.parent.remove(o);o.geometry.dispose();tubes[key]=null}
+  if(!pts||pts.length<2)return;const m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),Math.min(220,pts.length*2),r,6,false),mat);parent.add(m);tubes[key]=m}
+const rays=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineDashedMaterial({color:K.yellow,dashSize:.035,gapSize:.03,transparent:true,opacity:.6}));scene.add(rays);
+const family=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:K.ink,transparent:true,opacity:.6}));scene.add(family);
+const marker=new THREE.Mesh(new THREE.SphereGeometry(.022,14,10),new THREE.MeshBasicMaterial({color:K.ink}));
+const drop=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineDashedMaterial({color:K.ink,dashSize:.03,gapSize:.025,transparent:true,opacity:.7}));
+marker.visible=drop.visible=false;scene.add(marker,drop);
+
+/* ---- rebuilds ---- */
+let dirty=true;
+function rebuildSurface(){const pos=sGeo.attributes.position,col=sGeo.attributes.color,hc=hGeo.attributes.color,Lx=P.L;
+  for(let i=0;i<pos.count;i++){const z=F(pos.getX(i)*Lx,pos.getY(i)*Lx);pos.setZ(i,zS(z));const c=cmap(tOf(z));col.setXYZ(i,c[0],c[1],c[2]);hc.setXYZ(i,c[0],c[1],c[2])}
+  pos.needsUpdate=col.needsUpdate=hc.needsUpdate=true;sGeo.computeVertexNormals();sGeo.computeBoundingSphere();
+  const a=[],st=6,W=N+1;
+  for(let iy=0;iy<=N;iy+=st)for(let ix=0;ix<N;ix++){const p=iy*W+ix,q=p+1;a.push(pos.getX(p),pos.getY(p),pos.getZ(p)+.002,pos.getX(q),pos.getY(q),pos.getZ(q)+.002)}
+  for(let ix=0;ix<=N;ix+=st)for(let iy=0;iy<N;iy++){const p=iy*W+ix,q=p+W;a.push(pos.getX(p),pos.getY(p),pos.getZ(p)+.002,pos.getX(q),pos.getY(q),pos.getZ(q)+.002)}
+  meshLines.geometry.dispose();meshLines.geometry=segGeo(a);meshLines.visible=S.mesh;
+  rebuildContours();floorVis();rebuildSlice();rebuildProjection();colorbar();heatKey='';dirty=true}
+const TBL={1:[[3,0]],2:[[0,1]],3:[[3,1]],4:[[1,2]],5:[[3,0],[1,2]],6:[[0,2]],7:[[3,2]],8:[[2,3]],9:[[0,2]],10:[[0,1],[2,3]],11:[[1,2]],12:[[1,3]],13:[[0,1]],14:[[3,0]]};
+function march(v,n,c){const segs=[];for(let i=0;i<n;i++)for(let j=0;j<n;j++){const a=v[i][j],b=v[i+1][j],cc=v[i+1][j+1],d=v[i][j+1];
+    const idx=(a>c?1:0)|(b>c?2:0)|(cc>c?4:0)|(d>c?8:0);if(idx===0||idx===15)continue;
+    const x0=-1+2*i/n,x1=-1+2*(i+1)/n,y0=-1+2*j/n,y1=-1+2*(j+1)/n;
+    const E=e=>e===0?[x0+(c-a)/(b-a)*(x1-x0),y0]:e===1?[x1,y0+(c-b)/(cc-b)*(y1-y0)]:e===2?[x0+(c-d)/(cc-d)*(x1-x0),y1]:[x0,y0+(c-a)/(d-a)*(y1-y0)];
+    for(const[e1,e2]of TBL[idx]){const p=E(e1),q=E(e2);segs.push(p[0],p[1],q[0],q[1])}}return segs}
+function rebuildContours(){const n=64,Lx=P.L,v=[];for(let i=0;i<=n;i++){v.push([]);for(let j=0;j<=n;j++)v[i].push(F((-1+2*i/n)*Lx,(-1+2*j/n)*Lx))}
+  const pos=[],col=[];contourCache=[];
+  for(let k=1;k<=11;k++){const c=LO+(HI-LO)*k/12,rgb=cmap(tOf(c)),sg=march(v,n,c);
+    for(let q=0;q<sg.length;q+=4){pos.push(sg[q],sg[q+1],0,sg[q+2],sg[q+3],0);col.push(...rgb,...rgb)}contourCache.push(sg)}
+  const g=segGeo(pos);g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));contours.geometry.dispose();contours.geometry=g;
+  zeroCache=(LO<0&&HI>0)?march(v,n,0):[];const zf=[],zs=[],z0=zS(0);
+  for(let q=0;q<zeroCache.length;q+=4){zf.push(zeroCache[q],zeroCache[q+1],0,zeroCache[q+2],zeroCache[q+3],0);zs.push(zeroCache[q],zeroCache[q+1],z0+.003,zeroCache[q+2],zeroCache[q+3],z0+.003)}
+  zeroFloor.geometry.dispose();zeroFloor.geometry=segGeo(zf);zeroSurf.geometry.dispose();zeroSurf.geometry=segGeo(zs)}
+function floorVis(){heat.visible=S.floor==='heat';contours.visible=S.floor==='contours';zeroFloor.visible=S.zero&&S.floor!=='off';zeroSurf.visible=S.zero}
+function slicePts(u){const pts=[],Lx=P.L,M=160;for(let k=0;k<=M;k++){const w=-1+2*k/M;const z=S.axis==='y'?F(w*Lx,u*Lx):F(u*Lx,w*Lx);
+  pts.push(S.axis==='y'?new THREE.Vector3(w,u,zS(z)):new THREE.Vector3(u,w,zS(z)))}return pts}
+function rebuildSlice(){sliceGroup.rotation.z=S.axis==='x'?PI/2:0;sliceGroup.position.set(S.axis==='x'?S.s:0,S.axis==='y'?S.s:0,0);
+  const pts=slicePts(S.s);setTube('sSurf',scene,pts,.012,yelMat);
+  setTube('sWall',S.axis==='y'?yWall:xWall,pts.map(p=>S.axis==='y'?new THREE.Vector3(p.x,0,p.z):new THREE.Vector3(0,p.y,p.z)),.009,yelMat);
+  rebuildRays();const fam=[];
+  if(S.family)for(const u of FAM){const q=slicePts(u);for(let k=0;k<q.length-1;k++)fam.push(q[k].x,q[k].y,q[k].z+.003,q[k+1].x,q[k+1].y,q[k+1].z+.003)}
+  family.geometry.dispose();family.geometry=segGeo(fam);dirty=true}
+function rebuildRays(){const a=[];if(S.rays){const Lx=P.L;for(let k=0;k<=10;k++){const w=-1+2*k/10;const z=zS(S.axis==='y'?F(w*Lx,S.s*Lx):F(S.s*Lx,w*Lx));
+    if(S.axis==='y')a.push(w,S.s,z,w,ySide,z);else a.push(S.s,w,z,xSide,w,z)}}
+  rays.geometry.dispose();rays.geometry=segGeo(a);rays.computeLineDistances()}
+function marginal(alongY){const M=120,Lx=P.L,out=[];for(let i=0;i<=M;i++){const w=-1+2*i/M;let acc=S.proj==='max'?-Infinity:0;
+  for(let j=0;j<=M;j++){const q=-1+2*j/M,z=alongY?F(w*Lx,q*Lx):F(q*Lx,w*Lx);if(S.proj==='max')acc=Math.max(acc,z);else acc+=z}out.push(S.proj==='max'?acc:acc/(M+1))}return out}
+let margY=null,margX=null;
+function rebuildProjection(){if(S.proj==='off'){setTube('pY',yWall,null);setTube('pX',xWall,null);margY=margX=null;dirty=true;return}
+  margY=marginal(true);margX=marginal(false);const M=margY.length-1;
+  setTube('pY',yWall,margY.map((z,i)=>new THREE.Vector3(-1+2*i/M,0,zS(z))),.009,tealMat);
+  setTube('pX',xWall,margX.map((z,i)=>new THREE.Vector3(0,-1+2*i/M,zS(z))),.009,tealMat);dirty=true}
+
+/* ---- colour bar ---- */
+function colorbar(){const st=[];for(let k=0;k<=12;k++){const z=HI-(HI-LO)*k/12;st.push(`${rgbS(cmap(tOf(z)))} ${(k/12*100).toFixed(1)}%`)}
+  const cb=$('#b-cbar');cb.style.background=`linear-gradient(to bottom,${st.join(',')})`;const r=cb.getBoundingClientRect(),sr=stage.getBoundingClientRect();
+  if(r.height<2)return;const d=(HI-LO)>=6?0:2;const put=(el,z)=>{el.style.top=(r.top-sr.top+(HI-z)/(HI-LO)*r.height)+'px';el.textContent=fz(z,d)};
+  put($('#b-cbhi'),HI);put($('#b-cblo'),LO);put($('#b-cbmid'),(LO<0&&HI>0)?0:(LO+HI)/2)}
+function cbMark(z){const el=$('#b-cbmark');if(z==null){el.hidden=true;return}const cb=$('#b-cbar'),r=cb.getBoundingClientRect(),sr=stage.getBoundingClientRect();
+  el.hidden=false;el.style.top=(r.top-sr.top+(HI-z)/(HI-LO)*r.height)+'px'}
+
+/* ---- axis labels ---- */
+const LB={},labelsEl=$('#b-labels'),tv=new THREE.Vector3();
+function put(key,cls,x,y,z,txt){let el=LB[key];if(!el){el=h('span',{class:cls});labelsEl.append(el);LB[key]=el}
+  tv.set(x,y,z).project(camera);if(tv.z>1){el.style.display='none';return}el.style.display='';
+  el.style.left=((tv.x+1)/2*stage.clientWidth)+'px';el.style.top=((1-tv.y)/2*cv.clientHeight)+'px';if(el._t!==txt){el.textContent=txt;el._t=txt}}
+function labels(){const nx=-xSide,ny=-ySide,Lx=P.L,d=(HI-LO)>=6?0:2;
+  put('xa','ax',0,ny*1.28,-HB,P.axes[0]);put('ya','ax',nx*1.28,0,-HB,P.axes[1]);put('za','ax',nx*1.12,-ny,HB+.16,P.axes[2]);
+  put('x0','tk',-1,ny*1.12,-HB,fmt(-Lx,0));put('x1','tk',1,ny*1.12,-HB,fmt(Lx,0));put('xm','tk',0,ny*1.12,-HB,'0');
+  put('y0','tk',nx*1.12,-1,-HB,fmt(-Lx,0));put('y1','tk',nx*1.12,1,-HB,fmt(Lx,0));put('ym','tk',nx*1.12,0,-HB,'0');
+  put('z0','tk',nx*1.24,-ny,-HB+.1,fz(LO,d));put('z1','tk',nx*1.24,-ny,HB,fz(HI,d))}
+
+/* ---- camera views ---- */
+let fly=null;const flyTo=v=>{fly={from:camera.position.clone(),to:v.clone(),t:0}};
+$('#b-v3d').onclick=()=>flyTo(HOME);
+$('#b-vtop').onclick=()=>flyTo(new THREE.Vector3(.0001,-.0001,4.6));
+$('#b-vwall').onclick=()=>flyTo(S.axis==='y'?new THREE.Vector3(.0001,-4.6,.05):new THREE.Vector3(4.6,.0001,.05));
+
+/* ---- hover + click ---- */
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();let downAt=null;
+function clearHover(){S.hover=null;marker.visible=drop.visible=false;cbMark(null);dirty=true}
+cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(ndc,camera);const hit=ray.intersectObject(surface)[0];
+  if(hit&&Math.abs(hit.point.x)<=1&&Math.abs(hit.point.y)<=1){const x=hit.point.x*P.L,y=hit.point.y*P.L,z=F(x,y);S.hover={x,y,z};
+    marker.position.set(hit.point.x,hit.point.y,zS(z));marker.visible=true;
+    drop.geometry.dispose();drop.geometry=segGeo([hit.point.x,hit.point.y,zS(z),hit.point.x,hit.point.y,-HB+.004]);drop.computeLineDistances();drop.visible=true;cbMark(z);dirty=true}
+  else if(S.hover)clearHover()});
+cv.addEventListener('pointerleave',()=>{if(S.hover)clearHover()});
+cv.addEventListener('pointerdown',e=>{downAt=[e.clientX,e.clientY]});
+cv.addEventListener('pointerup',e=>{if(!downAt)return;const m=Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1]);downAt=null;
+  if(m<5&&S.hover){setSweep('S',false);sS.set(clamp((S.axis==='y'?S.hover.y:S.hover.x)/P.L,-1,1))}});
+
+/* ---- controls (built with the shared helpers) ---- */
+const presetSeg=segment($('#b-preset'),ORDER.map(k=>[k,PR[k].l]),S.k,k=>loadPreset(k));
+const gP=group(pn,'Parameter');let sP=null;
+const bSwP=h('button',{class:'btn',type:'button',onclick:()=>setSweep('P',!S.sweepP)},'Sweep the parameter');const pRow=h('div',{class:'row-btns'},bSwP);
+function buildParam(){if(sP){sP.row.remove();sP=null}gP.hidden=!P.param;if(!P.param)return;const q=P.param;
+  sP=slider(gP,{id:'b-p',label:q.n,min:q.min,max:q.max,step:q.step,value:S.p,f:v=>fmt(v,2)},v=>{setSweep('P',false);S.p=v;rebuildSurface()});gP.append(pRow)}
+const gS=group(pn,'Slice');const axEl=h('div',{class:'seg'});gS.append(axEl);let axSeg=null;
+function buildAxis(){axSeg=segment(axEl,[['y',`Fix <i>${P.axes[1]}</i>`],['x',`Fix <i>${P.axes[0]}</i>`]],S.axis,v=>{S.axis=v;sS.set(S.s,true);rebuildSlice()})}
+const sS=slider(gS,{id:'b-s',label:'position',min:-1,max:1,step:.005,value:S.s,f:v=>`${fixedN()} = ${fmt(v*P.L,2)}`},v=>{S.s=v;rebuildSlice()});
+sS.row.querySelector('input').addEventListener('input',()=>setSweep('S',false));
+const bSwS=h('button',{class:'btn',type:'button',onclick:()=>setSweep('S',!S.sweepS)},'Sweep the slice');gS.append(h('div',{class:'row-btns'},bSwS));
+const gPr=group(pn,'Projection onto the walls');const prEl=h('div',{class:'seg'});gPr.append(prEl);
+segment(prEl,[['off','Off'],['avg','Average'],['max','Shadow (max)']],S.proj,v=>{S.proj=v;rebuildProjection()});
+const gFl=group(pn,'Floor');const flEl=h('div',{class:'seg'});gFl.append(flEl);
+segment(flEl,[['contours','Contours'],['heat','Heatmap'],['off','Off']],S.floor,v=>{S.floor=v;floorVis();dirty=true});
+const gC=group(pn,'Colour map');const cmEl=h('div',{class:'seg'});gC.append(cmEl);
+const cmSeg=segment(cmEl,[['coolwarm','Coolwarm'],['viridis','Viridis']],S.cmap,v=>{S.cmap=v;rebuildSurface()});
+const gLy=group(pn,'Layers');const chips=h('div',{class:'chips'});gLy.append(chips);
+toggle(chips,{id:'b-mesh',label:'mesh lines',checked:S.mesh,color:K.dim},v=>{S.mesh=v;meshLines.visible=v});
+toggle(chips,{id:'b-rays',label:'projection rays',checked:S.rays,color:K.yellow},v=>{S.rays=v;rebuildRays()});
+toggle(chips,{id:'b-fam',label:'slice family',checked:S.family,color:K.ink},v=>{S.family=v;rebuildSlice()});
+toggle(chips,{id:'b-zero',label:'zero level',checked:S.zero,color:K.blue},v=>{S.zero=v;floorVis();dirty=true});
+const ro=h('dl',{class:'read'});pn.append(ro);
+const smSeg=segment($('#b-smseg'),[['slice','Across slice positions'],['param','Across the parameter']],S.sm,v=>{if(v==='param'&&!P.param){smSeg.select('slice');return}S.sm=v;dirty=true});
+let phS=0,phP=0;
+function setSweep(w,on){if(w==='S'){S.sweepS=on;bSwS.textContent=on?'Stop':'Sweep the slice';bSwS.classList.toggle('primary',on);if(on)phS=Math.asin(clamp(S.s/.92,-1,1))}
+  else{if(!P.param)on=false;S.sweepP=on;bSwP.textContent=on?'Stop':'Sweep the parameter';bSwP.classList.toggle('primary',on);
+    if(on){const q=P.param,m=(q.min+q.max)/2,hh=(q.max-q.min)/2;phP=Math.asin(clamp((S.p-m)/hh,-1,1))}}}
+function loadPreset(k){S.k=k;P=PR[k];presetSeg.select(k);[LO,HI]=range(P);S.cmap=P.cmap;cmSeg.select(S.cmap);S.p=P.param?P.param.def:0;
+  setSweep('P',false);buildParam();buildAxis();sS.set(S.s,true);
+  const smB=$('#b-smseg').querySelectorAll('button')[1];if(smB){smB.disabled=!P.param;smB.style.opacity=P.param?'':'.4'}if(!P.param&&S.sm==='param'){S.sm='slice';smSeg.select('slice')}
+  $('#b-formula').textContent=P.formula;
+  $('#b-notes').innerHTML=`<div class="note"><h4>What each piece is</h4><ul>${PIECES.map(x=>`<li>${x}</li>`).join('')}</ul></div><div class="note"><h4>Try this · ${P.l}</h4><ul>${P.tips.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+  clearHover();rebuildSurface()}
+
+/* ---- linked 2D panels (shared Plot class) ---- */
+function sliceVals(u,p){const M=160,Lx=P.L,o=[];for(let k=0;k<=M;k++){const w=(-1+2*k/M)*Lx;o.push(S.axis==='y'?P.f(w,u*Lx,p):P.f(u*Lx,w,p))}return o}
+function trace(c,vals,X,Y,col,lw){c.beginPath();vals.forEach((v,k)=>{const x=X(-1+2*k/(vals.length-1)),y=Y(v);k?c.lineTo(x,y):c.moveTo(x,y)});c.strokeStyle=col;c.lineWidth=lw;c.lineJoin='round';c.stroke()}
+const pW=new Plot($('#b-wall')),pT=new Plot($('#b-top')),pM=new Plot($('#b-sm'));
+pW.draw=(c,p)=>{const w=p.w,hh=p.h,l=44,r=10,t=12,b=26,X=u=>l+(u+1)/2*(w-l-r),Y=z=>t+(HI-z)/(HI-LO)*(hh-t-b);
+  c.strokeStyle=K.grid;c.lineWidth=1;c.beginPath();for(let k=0;k<=4;k++){const x=l+k*(w-l-r)/4,y=t+k*(hh-t-b)/4;c.moveTo(x,t);c.lineTo(x,hh-b);c.moveTo(l,y);c.lineTo(w-r,y)}c.stroke();
+  if(LO<0&&HI>0)L(c,l,Y(0),w-r,Y(0),K.axis,1.2);
+  if(S.family)FAM.forEach(u=>trace(c,sliceVals(u,S.p),X,Y,rgba(K.ink,.3),1.2));
+  const m=S.axis==='y'?margY:margX;if(S.proj!=='off'&&m)trace(c,m,X,Y,K.teal,2.4);
+  trace(c,sliceVals(S.s,S.p),X,Y,K.yellow,2.8);
+  if(S.hover){const u=(S.axis==='y'?S.hover.x:S.hover.y)/P.L;L(c,X(u),t,X(u),hh-b,rgba(K.ink,.45),1,[3,3])}
+  const d=(HI-LO)>=6?0:2,o={font:FMONO(10.5),col:K.faint};
+  T(c,fz(HI,d),l-6,t+4,{...o,align:'right'});T(c,fz(LO,d),l-6,hh-b,{...o,align:'right'});if(LO<0&&HI>0)T(c,'0',l-6,Y(0),{...o,align:'right'});
+  T(c,fmt(-P.L,0),l,hh-b+13,{...o,align:'left'});T(c,fmt(P.L,0),w-r,hh-b+13,{...o,align:'right'});T(c,'0',X(0),hh-b+13,o);
+  T(c,freeN(),X(0)+22,hh-b+13,{size:15});T(c,P.axes[2],12,(t+hh-b)/2,{size:15,align:'left'});
+  T(c,`${fixedN()} = ${fmt(S.s*P.L,2)}`,w-r-6,t+8,{col:K.yellow,align:'right',size:14});
+  if(S.proj!=='off')T(c,`${S.proj==='max'?'shadow':'average'} over ${fixedN()}`,w-r-6,t+26,{col:K.teal,align:'right',size:14})};
+let heatKey='';const heatCv=document.createElement('canvas');
+pT.draw=(c,p)=>{const w=p.w,hh=p.h,side=Math.max(10,Math.min(w-48,hh-30)),l=36+(w-48-side)/2,t=6,X=u=>l+(u+1)/2*side,Y=v=>t+(1-v)/2*side;
+  const key=`${S.k}|${S.p}|${S.cmap}`;
+  if(key!==heatKey){const n=120;heatCv.width=heatCv.height=n;const hc=heatCv.getContext('2d'),im=hc.createImageData(n,n);
+    for(let j=0;j<n;j++)for(let i=0;i<n;i++){const cc=cmap(tOf(F((-1+2*(i+.5)/n)*P.L,(1-2*(j+.5)/n)*P.L))),o=(j*n+i)*4;im.data[o]=cc[0]*255;im.data[o+1]=cc[1]*255;im.data[o+2]=cc[2]*255;im.data[o+3]=255}
+    hc.putImageData(im,0,0);heatKey=key}
+  c.imageSmoothingEnabled=true;c.drawImage(heatCv,l,t,side,side);
+  const seg=(sg,col,lw)=>{c.beginPath();for(let k=0;k<sg.length;k+=4){c.moveTo(X(sg[k]),Y(sg[k+1]));c.lineTo(X(sg[k+2]),Y(sg[k+3]))}c.strokeStyle=col;c.lineWidth=lw;c.stroke()};
+  contourCache.forEach(sg=>seg(sg,'rgba(6,8,10,.5)',1));if(S.zero)seg(zeroCache,K.blue,2);
+  c.strokeStyle=K.line;c.lineWidth=1;c.strokeRect(l,t,side,side);
+  if(S.family){c.setLineDash([3,4]);FAM.forEach(u=>{S.axis==='y'?L(c,l,Y(u),l+side,Y(u),rgba(K.ink,.55),1,[3,4]):L(c,X(u),t,X(u),t+side,rgba(K.ink,.55),1,[3,4])});c.setLineDash([])}
+  S.axis==='y'?L(c,l,Y(S.s),l+side,Y(S.s),K.yellow,2.4):L(c,X(S.s),t,X(S.s),t+side,K.yellow,2.4);
+  if(S.hover){const hx=X(S.hover.x/P.L),hy=Y(S.hover.y/P.L);L(c,hx-8,hy,hx+8,hy,K.ink,1);L(c,hx,hy-8,hx,hy+8,K.ink,1);dot(c,hx,hy,3,K.ink)}
+  const o={font:FMONO(10.5),col:K.faint};
+  T(c,fmt(-P.L,0),l,t+side+12,{...o,align:'left'});T(c,fmt(P.L,0),l+side,t+side+12,{...o,align:'right'});T(c,P.axes[0],l+side/2,t+side+13,{size:15});
+  T(c,fmt(P.L,0),l-5,t+6,{...o,align:'right'});T(c,fmt(-P.L,0),l-5,t+side-4,{...o,align:'right'});T(c,P.axes[1],l-16,t+side/2,{size:15})};
+let cells=[];
+pM.draw=(c,p)=>{const w=p.w,hh=p.h,cols=3,gx=8,gy=8,cw=(w-gx*(cols-1))/cols,ch=(hh-gy)/2;cells=[];
+  const isP=S.sm==='param'&&!!P.param,vals=isP?[0,1,2,3,4,5].map(k=>P.param.min+(P.param.max-P.param.min)*k/5):FAM,cur=isP?S.p:S.s;
+  let best=0;vals.forEach((v,k)=>{if(Math.abs(v-cur)<Math.abs(vals[best]-cur))best=k});
+  vals.forEach((v,k)=>{const cx=(k%cols)*(cw+gx),cy=Math.floor(k/cols)*(ch+gy),pad=6,top=20,X=u=>cx+pad+(u+1)/2*(cw-2*pad),Y=z=>cy+top+(HI-z)/(HI-LO)*(ch-top-pad);
+    c.fillStyle=K.panel;c.fillRect(cx,cy,cw,ch);c.strokeStyle=k===best?K.yellow:K.line;c.lineWidth=k===best?1.5:1;c.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
+    if(LO<0&&HI>0)L(c,cx+pad,Y(0),cx+cw-pad,Y(0),K.axis,1);
+    trace(c,isP?sliceVals(S.s,v):sliceVals(v,S.p),X,Y,k===best?K.yellow:rgba(K.ink,.8),k===best?2:1.4);
+    T(c,isP?`${P.param.n} = ${fmt(v,2)}`:`${fixedN()} = ${fmt(v*P.L,2)}`,cx+7,cy+11,{align:'left',size:13,col:k===best?K.yellow:K.dim,halo:false});
+    cells.push({x:cx,y:cy,w:cw,h:ch,v,isP})})};
+$('#b-sm').addEventListener('click',e=>{const r=e.currentTarget.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;const q=cells.find(q=>x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h);if(!q)return;
+  if(q.isP){setSweep('P',false);sP&&sP.set(q.v)}else{setSweep('S',false);sS.set(q.v)}});
+
+function readRO(){const sv=sliceVals(S.s,S.p);let mx=-Infinity,mean=0;sv.forEach(v=>{if(v>mx)mx=v;mean+=v});mean/=sv.length;
+  const fr=S.hover?(S.axis==='y'?S.hover.x:S.hover.y)/P.L:0,M=120,idx=Math.round((fr+1)/2*M),m=S.axis==='y'?margY:margX;
+  const sAt=S.axis==='y'?F(fr*P.L,S.s*P.L):F(S.s*P.L,fr*P.L);
+  const rows=[['cursor',S.hover?`(${fmt(S.hover.x,2)}, ${fmt(S.hover.y,2)})`:'hover the surface',''],[`${P.axes[2]} at cursor`,S.hover?fmt(S.hover.z,4):'—','b'],
+    [`slice: ${fixedN()}`,fmt(S.s*P.L,3),'y',1],['highest point on slice',fmt(mx,4),'y'],['average along slice',fmt(mean,4),'y'],
+    [`slice at ${freeN()} = ${fmt(fr*P.L,2)}`,fmt(sAt,4),'y',1]];
+  if(S.proj!=='off'&&m)rows.push([`${S.proj==='max'?'shadow':'average'} at ${freeN()} = ${fmt(fr*P.L,2)}`,fmt(m[idx],4),'t']);
+  if(P.param)rows.push([`parameter ${P.param.n}`,fmt(S.p,3),'',1]);readout(ro,rows)}
+
+/* ---- loop, only while this lab is on screen ---- */
+let active=false,raf=0,last=0,frame=0;
+function resize(){const w=stage.clientWidth,hh=cv.clientHeight;if(w<2||hh<2)return;renderer.setSize(w,hh,false);camera.aspect=w/hh;camera.updateProjectionMatrix();colorbar();dirty=true}
+new ResizeObserver(()=>{if(active)resize()}).observe(stage);
+function loop(now){if(!active)return;const dt=Math.min(.05,(now-last)/1000);last=now;frame++;
+  if(fly){fly.t=Math.min(1,fly.t+dt/.7);camera.position.lerpVectors(fly.from,fly.to,ease(fly.t));camera.lookAt(0,0,0);if(fly.t>=1)fly=null}
+  controls.update();
+  const xs=camera.position.x>0?-1:1,ys=camera.position.y>0?-1:1;if(xs!==xSide||ys!==ySide){xSide=xs;ySide=ys;xWall.position.x=xs;yWall.position.y=ys;rebuildRays()}
+  if(S.sweepS){phS+=dt*.7;sS.set(.92*Math.sin(phS),true);S.s=.92*Math.sin(phS);rebuildSlice()}
+  if(S.sweepP&&P.param){phP+=dt*.55;const q=P.param,mm=(q.min+q.max)/2,hh=(q.max-q.min)/2;S.p=mm+hh*Math.sin(phP);sP&&sP.set(S.p,true);if(frame%2===0)rebuildSurface()}
+  labels();renderer.render(scene,camera);
+  if(dirty&&(frame%2===0||!(S.sweepS||S.sweepP))){pW.render();pT.render();pM.render();readRO();dirty=false}
+  raf=requestAnimationFrame(loop)}
+window.BOXLAB={setActive(on){if(on===active)return;active=on;if(on){requestAnimationFrame(()=>{resize();last=performance.now();raf=requestAnimationFrame(loop)})}else cancelAnimationFrame(raf)}};
+SETMODE.box=k=>{if(k&&PR[k]&&k!==S.k)loadPreset(k);dirty=true};
+loadPreset(S.k);
+})();
+
 /* ================= routing ================= */
 let pendingMode=null;
-const VIEWS=['graph','nudge','chain','limits','transform','sheet'];
+const SECTIONS=[...document.querySelectorAll('section.lab')];
+const VIEWS=SECTIONS.map(s=>s.dataset.view);
+(()=>{const nav=$('#tabs');let dom=null;SECTIONS.forEach(s=>{const d=s.dataset.domain||'';if(d!==dom){dom=d;nav.append(h('span',{class:'dom'},d))}
+  nav.append(h('a',{href:'#'+s.dataset.view,'data-view':s.dataset.view,html:s.dataset.title}))})})();
 function route(){let v=(location.hash||'').slice(1);if(!VIEWS.includes(v))v='graph';
   document.querySelectorAll('section.lab').forEach(s=>s.hidden=s.dataset.view!==v);
   document.querySelectorAll('nav.tabs a').forEach(a=>a.setAttribute('aria-current',a.dataset.view===v?'page':'false'));
-  if(SETMODE[v]){SETMODE[v](pendingMode)}pendingMode=null;window.scrollTo({top:0});
+  if(SETMODE[v]){SETMODE[v](pendingMode)}pendingMode=null;if(window.BOXLAB)BOXLAB.setActive(v==='box');window.scrollTo({top:0});
   requestAnimationFrame(()=>PLOTS.forEach(p=>p.resize()))}
 window.addEventListener('hashchange',route);route();
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>PLOTS.forEach(p=>p.render()));
