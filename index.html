@@ -257,6 +257,33 @@ a.xlink:hover{border-color:var(--blue)}
       <aside class="panel" id="pn-plane"></aside>
     </div>
     <div class="notes" id="pl-notes"></div>
+
+    <div class="plane-block" id="n-route3d">
+      <div class="lab-head">
+        <div>
+          <p class="eyebrow">Product rule, third view · x put back</p>
+          <h2>The product as a <em>curve in space</em></h2>
+          <p class="lede">The box above hides <span class="m">x</span>. Here it gets its own axis. As <span class="m">x</span> runs, the point <span class="m">(x, u, v)</span> traces one curve. Its three shadows are the three flat plots you already know, and the box is a cross-section of the curve at one value of <span class="m">x</span>. One nudge <span class="m">dx</span> moves everything at once.</p>
+        </div>
+        <div class="seg" id="r3-pair"></div>
+      </div>
+      <div class="lab-body">
+        <div class="stage box-stage" id="r3-stage">
+          <div class="b-labels" id="r3-labels"></div>
+          <div class="b-formula" id="r3-formula"></div>
+          <div class="stage-tools">
+            <button class="btn" type="button" id="r3-v3d">3D</button>
+            <button class="btn" type="button" id="r3-vbox">Close up on the box</button>
+            <button class="btn" type="button" id="r3-vend">Look along x: value plane</button>
+            <button class="btn" type="button" id="r3-vfloor">Look down: u against x</button>
+            <button class="btn" type="button" id="r3-vside">From the side: v against x</button>
+          </div>
+          <div class="hint">drag to rotate · scroll to zoom</div>
+        </div>
+        <aside class="panel" id="pn-r3"></aside>
+      </div>
+      <div class="notes" id="r3-notes"></div>
+    </div>
   </div>
 </section>
 
@@ -984,7 +1011,8 @@ function buildControls(){const P=PAIRS[Q.k];ctl.innerHTML='';ctl.append(h('h3',{
     h('button',{class:'btn primary',type:'button',onclick:()=>{const s=Q.dx;tween(2400,k=>sDX.set(Math.exp(lerp(Math.log(Math.max(s,0.5)),Math.log(0.002),ease(k)))))}},'Shrink d'+P.xn+' → 0'),
     h('button',{class:'btn',type:'button',onclick:()=>sDX.set(P.dx)},'Reset nudge')))}
 function sync(){if(Q.k==='sinsq'&&window.NUDGE_BOX)NUDGE_BOX.set(Q.x,Q.dx)}
-window.PLANE={fromBox(x,dx){if(Q.k!=='sinsq')return;Q.x=x;Q.dx=dx;if(sX){sX.set(x,true);sDX.set(dx,true)}up()}};
+window.PLANE={fromBox(x,dx){if(Q.k!=='sinsq')return;Q.x=x;Q.dx=dx;if(sX){sX.set(x,true);sDX.set(dx,true)}up()},pairs:PAIRS,state:()=>({k:Q.k,x:Q.x,dx:Q.dx}),
+  set(k,x,dx){if(k!==Q.k){Q.k=k;ps.select(k);bg=null;Q.x=x;Q.dx=dx;buildControls()}else{Q.x=x;Q.dx=dx;sX.set(x,true);sDX.set(dx,true)}sync();up()}};
 function vals(){const P=PAIRS[Q.k],x=Q.x,d=Q.dx;const u0=P.u(x),v0=P.v(x),u1=P.u(x+d),v1=P.v(x+d),du=u1-u0,dv=v1-v0;
   return{P,x,d,u0,v0,u1,v1,du,dv,a1:v0*du,a2:u0*dv,a3:du*dv,P0:u0*v0,P1:u1*v1,up:P.du(x),vp:P.dv(x)}}
 function buildBg(P){const key=Q.k+'|'+p2.w+'x'+p2.h;if(bg&&bgKey===key)return;bgKey=key;const st=2,W=Math.ceil(p2.w/st),H=Math.ceil(p2.h/st);
@@ -1074,7 +1102,7 @@ $('#pl-notes').innerHTML=`<div class="note"><h4>What that explanation is saying,
 const ps=segment($('#pl-pair'),Object.entries(PAIRS).map(([k,o])=>[k,o.l]),Q.k,k=>{Q.k=k;Q.x=PAIRS[k].x;Q.dx=PAIRS[k].dx;bg=null;buildControls();sync();up()});
 function nearest(px,py){const P=PAIRS[Q.k];let best={d:1e9,x:Q.x};for(let i=0;i<=900;i++){const x=P.r[0]+(P.r[1]-P.r[0])*i/900;const d=Math.hypot(B.X(P.u(x))-px,B.Y(P.v(x))-py);if(d<best.d)best={d,x}}return best}
 pointer(p2.cv,{down(x,y){if(!B)return null;return nearest(x,y).d<32?'pt':null},move(t,x,y){sX.set(nearest(x,y).x)}});
-function up(){p2.render();p3.render()}
+function up(){p2.render();p3.render();window.ROUTE3D&&ROUTE3D.sync()}
 buildControls();up();
 })();
 
@@ -1383,6 +1411,157 @@ function loop(now){if(!active)return;const dt=Math.min(.05,(now-last)/1000);last
 window.BOXLAB={setActive(on){if(on===active)return;active=on;if(on){requestAnimationFrame(()=>{resize();last=performance.now();raf=requestAnimationFrame(loop)})}else cancelAnimationFrame(raf)}};
 SETMODE.box=k=>{if(k&&PR[k]&&k!==S.k)loadPreset(k);dirty=true};
 loadPreset(S.k);
+})();
+
+
+/* ================= PRODUCT RULE, THIRD VIEW: x put back as an axis ================= */
+(()=>{
+const stage=$('#r3-stage'),pn=$('#pn-r3');
+if(!window.THREE||!THREE.OrbitControls||!window.PLANE||!PLANE.pairs){stage.style.minHeight='360px';stage.insertAdjacentHTML('beforeend','<div class="b-fail">The 3D library did not load, so this view cannot run. Check the connection and reload the page.</div>');return}
+const PAIRS=PLANE.pairs;let st=PLANE.state(),P=PAIRS[st.k];
+const XL=1.5,YL=1,ZL=.85;
+const X=x=>-XL+(x-P.r[0])/(P.r[1]-P.r[0])*2*XL, Y=u=>-YL+(u-P.view[0])/(P.view[1]-P.view[0])*2*YL, Z=v=>-ZL+(v-P.view[2])/(P.view[3]-P.view[2])*2*ZL;
+const V3=(a,b,c)=>new THREE.Vector3(a,b,c);
+const SH={rays:true,next:true,shadows:true};
+
+/* scene */
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setClearColor(new THREE.Color(K.stage));
+const cv=renderer.domElement;cv.setAttribute('aria-label','3D view: the curve (x, u, v), its shadows and the product box');stage.prepend(cv);
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(38,1,.05,100);camera.up.set(0,0,1);
+const HOME=V3(3.7,-3.6,2.3);camera.position.copy(HOME);
+const controls=new THREE.OrbitControls(camera,cv);controls.enableDamping=true;controls.dampingFactor=.08;controls.minDistance=2.4;controls.maxDistance=10;controls.maxPolarAngle=PI*.62;controls.enablePan=false;
+const segGeo=a=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(a,3));return g};
+const MATS={},mat=(c,op=1)=>{const k=c+op;return MATS[k]||(MATS[k]=new THREE.MeshBasicMaterial({color:c,transparent:op<1,opacity:op,side:THREE.DoubleSide,depthWrite:op>=1}))};
+const LMATS={},lmat=(c,op,dash)=>{const k=c+op+dash;return LMATS[k]||(LMATS[k]=dash?new THREE.LineDashedMaterial({color:c,transparent:true,opacity:op,dashSize:.035,gapSize:.03}):new THREE.LineBasicMaterial({color:c,transparent:op<1,opacity:op}))};
+function quad(g,a,b,c,d,col,op){const geo=segGeo([...a,...b,...c,...a,...c,...d]);g.add(new THREE.Mesh(geo,mat(col,op)))}
+function lines(g,arr,col,op=1,dash=false){const l=new THREE.LineSegments(segGeo(arr),lmat(col,op,dash));if(dash)l.computeLineDistances();g.add(l)}
+function tube(g,pts,r,col){if(pts.length<2)return;g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),Math.min(320,pts.length*2),r,6,false),mat(col)))}
+function clear(g){for(let i=g.children.length-1;i>=0;i--){const o=g.children[i];g.remove(o);o.geometry&&o.geometry.dispose()}}
+const paneMat=new THREE.MeshBasicMaterial({color:'#0b0f14',side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:2});
+function pane(c,grid){const g=new THREE.Group();quad(g,c[0],c[1],c[2],c[3],'#0b0f14',1);g.children[0].material=paneMat;
+  lines(g,grid,K.blue,.13);lines(g,[...c[0],...c[1],...c[1],...c[2],...c[2],...c[3],...c[3],...c[0]],K.ink,.22);const d=new THREE.Group();g.add(d);g.dyn=d;return g}
+const gF=[],gB=[],gE=[];for(let k=0;k<=4;k++){const a=-XL+k*XL/2,b=-YL+k*YL/2,c=-ZL+k*ZL/2;gF.push(a,-YL,0,a,YL,0,-XL,b,0,XL,b,0);gB.push(a,0,-ZL,a,0,ZL,-XL,0,c,XL,0,c);gE.push(0,b,-ZL,0,b,ZL,0,-YL,c,0,YL,c)}
+const floor=pane([[-XL,-YL,0],[XL,-YL,0],[XL,YL,0],[-XL,YL,0]],gF);floor.position.z=-ZL;
+const back=pane([[-XL,0,-ZL],[XL,0,-ZL],[XL,0,ZL],[-XL,0,ZL]],gB);      // x–v wall
+const endW=pane([[0,-YL,-ZL],[0,YL,-ZL],[0,YL,ZL],[0,-YL,ZL]],gE);      // u–v wall
+scene.add(floor,back,endW);const dyn=new THREE.Group();scene.add(dyn);let xSide=0,ySide=0;
+
+/* rebuild everything that depends on x, dx or the pair */
+let dirty=true,last3={},active=false;
+function rebuild(){[dyn,floor.dyn,back.dyn,endW.dyn].forEach(clear);
+  const x0=st.x,dx=st.dx,x1=x0+dx,u0=P.u(x0),v0=P.v(x0),u1=P.u(x1),v1=P.v(x1),du=u1-u0,dv=v1-v0;
+  const X0=X(x0),X1=X(x1),a1=v0*du,a2=u0*dv,P0=u0*v0;
+  const c1=a1>=0?K.green:K.red,c2=a2>=0?K.teal:K.red,cb=P0>=0?K.blue:K.red;
+  last3={x0,dx,x1,u0,v0,u1,v1,du,dv,a1,a2,a3:du*dv,P0,P1:u1*v1,X0,X1,c1,c2};
+  // the curve and its three shadows
+  const pts=[],N=300;for(let i=0;i<=N;i++){const x=P.r[0]+(P.r[1]-P.r[0])*i/N;pts.push([X(x),Y(P.u(x)),Z(P.v(x))])}
+  tube(dyn,pts.map(p=>V3(...p)),.011,K.ink);
+  if(SH.shadows){tube(floor.dyn,pts.map(p=>V3(p[0],p[1],.004)),.008,K.gold);tube(back.dyn,pts.map(p=>V3(p[0],0,p[2])),.008,K.purple);tube(endW.dyn,pts.map(p=>V3(0,p[1],p[2])),.007,K.dim)}
+  // x-axis through every box corner (u = 0, v = 0)
+  lines(dyn,[-XL,Y(0),Z(0),XL,Y(0),Z(0)],K.ink,.55);
+  // the box at x
+  const y0=Y(0),z0=Z(0),Yu0=Y(u0),Zv0=Z(v0),Yu1=Y(u1),Zv1=Z(v1);
+  quad(dyn,[X0,y0,z0],[X0,Yu0,z0],[X0,Yu0,Zv0],[X0,y0,Zv0],cb,.32);
+  lines(dyn,[X0,y0,z0,X0,Yu0,z0,X0,Yu0,z0,X0,Yu0,Zv0,X0,Yu0,Zv0,X0,y0,Zv0,X0,y0,Zv0,X0,y0,z0],cb,.95);
+  // the box at x + dx: old area carried forward, plus the strips and corner
+  if(SH.next){quad(dyn,[X1,y0,z0],[X1,Yu0,z0],[X1,Yu0,Zv0],[X1,y0,Zv0],cb,.1);
+    quad(dyn,[X1,Yu0,z0],[X1,Yu1,z0],[X1,Yu1,Zv0],[X1,Yu0,Zv0],c1,.6);
+    quad(dyn,[X1,y0,Zv0],[X1,Yu0,Zv0],[X1,Yu0,Zv1],[X1,y0,Zv1],c2,.6);
+    quad(dyn,[X1,Yu0,Zv0],[X1,Yu1,Zv0],[X1,Yu1,Zv1],[X1,Yu0,Zv1],K.yellow,.85);
+    lines(dyn,[X1,y0,z0,X1,Yu1,z0,X1,Yu1,z0,X1,Yu1,Zv1,X1,Yu1,Zv1,X1,y0,Zv1,X1,y0,Zv1,X1,y0,z0],K.ink,.5,true)}
+  // current point and its step along the curve
+  {const m=new THREE.Mesh(new THREE.SphereGeometry(.03,16,12),mat(K.ink));m.position.set(X0,Yu0,Zv0);dyn.add(m)}
+  tube(dyn,[V3(X0,Yu0,Zv0),V3(X1,Yu1,Zv1)],.012,K.yellow);
+  // floor: dx then du.  back wall: dx then dv.  end wall: the box seen head-on
+  tube(floor.dyn,[V3(X0,Yu0,.006),V3(X1,Yu0,.006)],.011,K.ink);tube(floor.dyn,[V3(X1,Yu0,.006),V3(X1,Yu1,.006)],.013,c1);
+  tube(back.dyn,[V3(X0,0,Zv0),V3(X1,0,Zv0)],.011,K.ink);tube(back.dyn,[V3(X1,0,Zv0),V3(X1,0,Zv1)],.013,c2);
+  lines(endW.dyn,[0,y0,z0,0,Yu0,z0,0,Yu0,z0,0,Yu0,Zv0,0,Yu0,Zv0,0,y0,Zv0,0,y0,Zv0,0,y0,z0],cb,.9);
+  {const m=new THREE.Mesh(new THREE.SphereGeometry(.022,12,10),mat(K.ink));m.position.set(0,Yu0,Zv0);endW.dyn.add(m)}
+  // projection rays: the point to each wall; strip edges to the steps they come from
+  if(SH.rays){const fz=-ZL,by=ySide*YL,ex=xSide*XL;
+    lines(dyn,[X0,Yu0,Zv0,X0,Yu0,fz, X0,Yu0,Zv0,X0,by,Zv0, X0,Yu0,Zv0,ex,Yu0,Zv0],K.ink,.45,true);
+    if(SH.next){lines(dyn,[X1,Yu0,z0,X1,Yu0,fz, X1,Yu1,z0,X1,Yu1,fz],c1,.75,true);
+      lines(dyn,[X1,y0,Zv0,X1,by,Zv0, X1,y0,Zv1,X1,by,Zv1],c2,.75,true)}}
+  dirty=false;readRO();pA.render()}
+
+/* overlay labels */
+const LB={},lbEl=$('#r3-labels'),tv=new THREE.Vector3();
+function put(key,cls,x,y,z,txt,col){let el=LB[key];if(!el){el=h('span',{class:cls});lbEl.append(el);LB[key]=el}
+  tv.set(x,y,z).project(camera);if(tv.z>1){el.style.display='none';return}el.style.display='';
+  el.style.left=((tv.x+1)/2*stage.clientWidth)+'px';el.style.top=((1-tv.y)/2*cv.clientHeight)+'px';if(el._t!==txt){el.innerHTML=txt;el._t=txt}if(col)el.style.color=col}
+function labels(){const nx=-xSide,ny=-ySide,s=last3;if(s.X0==null)return;
+  put('xa','ax',0,ny*YL*1.25,-ZL,P.xn);put('ua','ax',nx*XL*1.12,0,-ZL,'u');put('va','ax',nx*XL*1.06,ySide*YL,ZL+.14,'v');
+  put('x0','tk',-XL,ny*YL*1.1,-ZL,fmt(P.r[0],2));put('x1','tk',XL,ny*YL*1.1,-ZL,fmt(P.r[1],2));
+  put('u0','tk',nx*XL*1.08,-YL,-ZL,fmt(P.view[0],1));put('u1','tk',nx*XL*1.08,YL,-ZL,fmt(P.view[1],1));
+  put('v0','tk',nx*XL*1.06,ySide*YL,-ZL+.18,fmt(P.view[2],1));put('v1','tk',nx*XL*1.06,ySide*YL,ZL,fmt(P.view[3],1));
+  put('ldx','ax',(s.X0+s.X1)/2,Y(s.u0),-ZL,'d'+P.xn,K.ink);put('ldu','ax',s.X1,(Y(s.u0)+Y(s.u1))/2,-ZL+.08,'du',s.c1);put('ldv','ax',s.X1,ySide*YL,(Z(s.v0)+Z(s.v1))/2,'dv',s.c2)}
+
+/* camera views */
+/* axis views use a long lens from far away, so depth flattens and the view reads as a true 2D plot */
+let fly=null;const ORIGIN=V3(0,0,0);
+function flyTo(dir,dist,fov,target){const t=(target||ORIGIN).clone();controls.maxDistance=Math.max(10,dist*1.2);
+  fly={from:camera.position.clone(),to:t.clone().add(dir.clone().normalize().multiplyScalar(dist)),tf:controls.target.clone(),tt:t,f0:camera.fov,f1:fov,t:0}}
+$('#r3-v3d').onclick=()=>flyTo(HOME,HOME.length(),38);
+$('#r3-vend').onclick=()=>flyTo(V3(1,.00002,.00001),26,9);
+$('#r3-vfloor').onclick=()=>flyTo(V3(.00002,-.00002,1),26,9);
+$('#r3-vside').onclick=()=>flyTo(V3(.00002,-1,.00001),26,9);
+$('#r3-vbox').onclick=()=>{const s=last3;if(s.X0==null)return;const c=V3((s.X0+s.X1)/2,(Y(0)+Y(s.u1))/2,(Z(0)+Z(s.v1))/2);flyTo(V3(1.4,-1.1,.7),1.9,38,c)};
+
+/* controls */
+const pairSeg=segment($('#r3-pair'),Object.entries(PAIRS).map(([k,o])=>[k,o.l]),st.k,k=>PLANE.set(k,PAIRS[k].x,PAIRS[k].dx));
+const gM=group(pn,'Move along x');let sx=null,sdx=null;const btns=h('div',{class:'row-btns'});
+function buildCtl(){if(sx){sx.row.remove();sdx.row.remove()}gM.querySelector('h3').textContent=`Move along ${P.xn}`;
+  sx=slider(gM,{id:'r3-x',label:P.xn==='t'?'t (weeks)':'x',min:P.r[0],max:P.r[1],value:st.x,f:v=>fmt(v,3)},v=>PLANE.set(st.k,v,st.dx));
+  sdx=slider(gM,{id:'r3-dx',label:'nudge d'+P.xn,min:.002,max:1,value:st.dx,log:true,f:v=>fmt(v,4)},v=>PLANE.set(st.k,st.x,v));
+  btns.innerHTML='';btns.append(h('button',{class:'btn primary',type:'button',onclick:()=>{const s=st.dx;tween(2400,k=>sdx.set(Math.exp(lerp(Math.log(Math.max(s,.5)),Math.log(.002),ease(k)))))}},'Shrink d'+P.xn+' → 0'),
+    h('button',{class:'btn',type:'button',onclick:()=>sdx.set(P.dx)},'Reset nudge'));gM.append(btns);
+  $('#r3-formula').textContent=`${P.ul},  ${P.vl}`}
+const gL=group(pn,'Layers');const chips=h('div',{class:'chips'});gL.append(chips);
+toggle(chips,{id:'r3-rays',label:'projection rays',checked:SH.rays,color:K.ink},v=>{SH.rays=v;dirty=true});
+toggle(chips,{id:'r3-next',label:'box at x + dx',checked:SH.next,color:K.yellow},v=>{SH.next=v;dirty=true});
+toggle(chips,{id:'r3-sh',label:'shadows on walls',checked:SH.shadows,color:K.gold},v=>{SH.shadows=v;dirty=true});
+const ro=h('dl',{class:'read'});pn.append(ro);
+const mc=h('canvas',{class:'mini','aria-label':'Area u times v plotted against x'});pn.append(h('div',{class:'group'},h('h3',{},'Area against x'),mc));
+const pA=new Plot(mc);
+pA.draw=(c,p)=>{const A=x=>P.u(x)*P.v(x);let lo=Infinity,hi=-Infinity;for(let i=0;i<=200;i++){const v=A(P.r[0]+(P.r[1]-P.r[0])*i/200);if(isFinite(v)){lo=Math.min(lo,v);hi=Math.max(hi,v)}}
+  const pad=Math.max(.2,(hi-lo)*.12);p.v={x0:P.r[0]-(P.r[1]-P.r[0])*.04,x1:P.r[1]+(P.r[1]-P.r[0])*.04,y0:lo-pad,y1:hi+pad};p.grid();p.curve(A,K.blue,2.2);
+  const s=last3;if(s.x0==null)return;const A0=s.P0,A1=s.P1,sl=(A1-A0)/s.dx;
+  L(c,p.X(s.x0-1e3),p.Y(A0-sl*1e3),p.X(s.x0+1e3),p.Y(A0+sl*1e3),rgba(K.yellow,.55),1.2,[5,4]);
+  L(c,p.X(s.x0),p.Y(A0),p.X(s.x1),p.Y(A0),K.ink,1.8);L(c,p.X(s.x1),p.Y(A0),p.X(s.x1),p.Y(A1),K.yellow,2.2);
+  dot(c,p.X(s.x0),p.Y(A0),4.5,K.ink,K.blue);T(c,'A = u·v',10,14,{align:'left',col:K.blue,size:14})};
+function readRO(){const s=last3,xn=P.xn;readout(ro,[[xn,fmt(s.x0,3)],['d'+xn,fmt(s.dx,4),'y'],
+  ['du  (floor step)',fmt(s.du,5),s.a1>=0?'g':'r',1],['dv  (wall step)',fmt(s.dv,5),s.a2>=0?'t':'r'],
+  ['side strip  v·du',fmt(s.a1,5),s.a1>=0?'g':'r',1],['top strip  u·dv',fmt(s.a2,5),s.a2>=0?'t':'r'],['corner  du·dv',fmt(s.a3,6),'y'],
+  ['dA exact',fmt(s.P1-s.P0,5),'b',1],[`dA / d${xn}`,fmt((s.P1-s.P0)/s.dx,4),'b'],["u′·v + u·v′",fmt(P.du(s.x0)*s.v0+s.u0*P.dv(s.x0),4),'g']])}
+$('#r3-notes').innerHTML=`<div class="note"><h4>What you are looking at</h4><ul>
+<li>The white curve is the point <span class="m">(x, u, v)</span> as <span class="m">x</span> runs. It is the only object here. Everything else is a view of it.</li>
+<li>Its shadow on the floor is the graph of <span class="m">u</span> against <span class="m">x</span> (gold). On the back wall, the graph of <span class="m">v</span> against <span class="m">x</span> (purple). On the end wall, the route from the value plane above.</li>
+<li>The solid rectangle stands at depth <span class="m">x</span>, with sides <span class="m">u</span> and <span class="m">v</span>: that is the product box. The dashed one stands at <span class="m">x + dx</span>. The coloured pieces are what was added between them.</li>
+<li>Drop the side strip straight down and it lands on <span class="m">du</span> on the floor. Push the top strip back and it lands on <span class="m">dv</span> on the wall. Each strip is one step, multiplied by the other side.</li>
+<li>Both steps come from the same <span class="m">dx</span>, drawn in white on the floor and on the wall. That is why dividing the strips by <span class="m">dx</span> makes sense.</li>
+<li>The x-axis runs through the corner of every rectangle, because each box is measured from <span class="m">u = 0, v = 0</span>.</li></ul></div>
+<div class="note"><h4>Try this</h4><ul>
+<li>Press <b>Look along x</b>. The <span class="m">x</span> direction collapses and you are looking at the value plane. <b>Look down</b> gives the graph of <span class="m">u</span>; <b>From the side</b> gives <span class="m">v</span>. Each 2D picture is one camera angle on the same curve.</li>
+<li>Press <b>Shrink dx → 0</b>. The floor step and the wall step shrink in step with <span class="m">dx</span>. The corner, a step times a step, shrinks fastest.</li>
+<li><b>x · (1/x)</b>: the curve stays on the surface <span class="m">u·v = 1</span>, so the strips cancel and the area plot is flat.</li>
+<li><b>price × sales</b>: move <span class="m">t</span> to about 4.17 weeks. The strips balance and the area plot peaks.</li>
+<li><b>sin x · x²</b>: go past <span class="m">x = π</span>. <span class="m">u</span> turns negative, the rectangle crosses to the other side of the x-axis and turns red.</li></ul></div>`;
+
+/* sync with the value plane (single source of truth) */
+window.ROUTE3D={sync(){const s=PLANE.state(),changed=s.k!==st.k;st=s;P=PAIRS[st.k];
+  if(changed){pairSeg.select(st.k);buildCtl()}else if(sx){sx.set(st.x,true);sdx.set(st.dx,true)}dirty=true;if(!active){rebuild()}}};
+buildCtl();rebuild();
+
+/* run only while on screen */
+let raf=0,lastT=0;
+function resize(){const w=stage.clientWidth,hh=cv.clientHeight;if(w<2||hh<2)return;renderer.setSize(w,hh,false);camera.aspect=w/hh;camera.updateProjectionMatrix()}
+function loop(now){if(!active)return;const dt=Math.min(.05,(now-lastT)/1000);lastT=now;
+  if(fly){fly.t=Math.min(1,fly.t+dt/.8);const e=ease(fly.t);camera.position.lerpVectors(fly.from,fly.to,e);controls.target.lerpVectors(fly.tf,fly.tt,e);camera.fov=lerp(fly.f0,fly.f1,e);camera.updateProjectionMatrix();camera.lookAt(controls.target);if(fly.t>=1)fly=null}
+  controls.update();const xs=camera.position.x>0?-1:1,ys=camera.position.y>0?-1:1;
+  if(xs!==xSide||ys!==ySide){xSide=xs;ySide=ys;endW.position.x=xs*XL;back.position.y=ys*YL;dirty=true}
+  if(dirty)rebuild();labels();renderer.render(scene,camera);raf=requestAnimationFrame(loop)}
+new ResizeObserver(()=>{if(active)resize()}).observe(stage);
+new IntersectionObserver(es=>{const on=es[0].isIntersecting;if(on===active)return;active=on;if(on){resize();lastT=performance.now();raf=requestAnimationFrame(loop)}else cancelAnimationFrame(raf)}).observe(stage);
 })();
 
 /* ================= routing ================= */
