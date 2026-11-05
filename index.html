@@ -115,6 +115,19 @@ dl.read dt.sep,dl.read dd.sep{border-top:1px dashed var(--line);padding-top:6px;
 .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.86em;line-height:1.1;margin:0 2px}
 .frac>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}
 
+.plane-block{margin-top:36px;padding-top:24px;border-top:1px solid var(--line)}
+.plane-block h2{font-size:clamp(24px,2.8vw,34px)}
+.pipe{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:10px;align-items:stretch;margin-bottom:14px}
+.pipe .st{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.pipe .k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.pipe .big{font-size:18px;overflow-wrap:anywhere}
+.pipe .v{font:12.5px var(--f-mono);color:var(--dim);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.pipe .arr{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:11.5px;gap:2px;max-width:150px}
+.pipe .arr b{font-size:22px;color:var(--blue);line-height:1}
+.pipe .arr small{font-family:var(--f-math);font-style:italic;font-size:13px;color:var(--ink)}
+.cg{color:var(--green)}.ct{color:var(--teal)}.cy{color:var(--yellow)}.cr{color:var(--red)}.co{color:var(--gold)}
+.mini{display:block;width:100%;height:170px;background:var(--stage);border:1px solid var(--line);border-radius:6px}
+@media (max-width:760px){.pipe{grid-template-columns:minmax(0,1fr)}.pipe .arr{max-width:none;flex-direction:row;gap:8px}.pipe .arr b{transform:rotate(90deg)}}
 @media (max-width:980px){
   .lab-body{grid-template-columns:minmax(0,1fr)}
   .notes{grid-template-columns:minmax(0,1fr)}
@@ -204,6 +217,22 @@ dl.read dt.sep,dl.read dd.sep{border-top:1px dashed var(--line);padding-top:6px;
     <aside class="panel" id="pn-nudge"></aside>
   </div>
   <div class="notes" id="n-notes"></div>
+  <div class="plane-block" id="n-plane" hidden>
+    <div class="lab-head">
+      <div>
+        <p class="eyebrow">Product rule, second view · why sin x and x² can be sides</p>
+        <h2>The <em>value plane</em></h2>
+        <p class="lede">The sides of the box above are not lengths. They are two numbers, <span class="m">u</span> and <span class="m">v</span>, and the box is how we draw <span class="m">u × v</span>. Here every point of the plane owns its own box. Your two functions trace a route through the plane, and the product rule is what happens to the box as you take one small step along it.</p>
+      </div>
+      <div class="seg" id="pl-pair"></div>
+    </div>
+    <div class="pipe" id="pl-pipe"></div>
+    <div class="lab-body">
+      <div class="stage"><canvas id="cv-plane" aria-label="Value plane: product of two numbers as a box"></canvas><div class="hint">drag along the route · teal region: product positive · purple: negative</div></div>
+      <aside class="panel" id="pn-plane"></aside>
+    </div>
+    <div class="notes" id="pl-notes"></div>
+  </div>
 </section>
 
 <!-- =============== CHAIN =============== -->
@@ -480,7 +509,8 @@ g=mk('square');slider(g,{id:'n-x',label:'side x',min:0.5,max:3.2,value:N.x},v=>{
 g=mk('cube');slider(g,{id:'n-cx',label:'side x',min:0.5,max:3,value:N.cx},v=>{N.cx=v;up()});slider(g,{id:'n-cdx',label:'nudge dx',min:0.01,max:1,value:N.cdx,log:true,f:v=>fmt(v,3)},v=>{N.cdx=v;up()});
 g=mk('puddle');slider(g,{id:'n-ux',label:'width x',min:0.45,max:3.6,value:N.ux},v=>{N.ux=v;up()});slider(g,{id:'n-udx',label:'nudge dx',min:0.005,max:1,value:N.udx,log:true,f:v=>fmt(v,3)},v=>{N.udx=v;up()});
 g=mk('sine');slider(g,{id:'n-th',label:'θ (arc length)',min:0,max:2*PI,value:N.th},v=>{N.th=v;up()});slider(g,{id:'n-dth',label:'nudge dθ',min:0.005,max:0.8,value:N.dth,log:true,f:v=>fmt(v,3)},v=>{N.dth=v;up()});
-g=mk('product');slider(g,{id:'n-px',label:'x',min:0.2,max:2.9,value:N.px},v=>{N.px=v;up()});slider(g,{id:'n-pdx',label:'nudge dx',min:0.005,max:0.6,value:N.pdx,log:true,f:v=>fmt(v,3)},v=>{N.pdx=v;up()});
+g=mk('product');const sPX=slider(g,{id:'n-px',label:'x',min:-3.6,max:3.6,value:N.px},v=>{N.px=v;up();window.PLANE&&PLANE.fromBox(N.px,N.pdx)});const sPDX=slider(g,{id:'n-pdx',label:'nudge dx',min:0.002,max:1,value:N.pdx,log:true,f:v=>fmt(v,3)},v=>{N.pdx=v;up();window.PLANE&&PLANE.fromBox(N.px,N.pdx)});
+window.NUDGE_BOX={set(x,dx){sPX.set(x,true);sPDX.set(dx,true);N.px=clamp(x,-3.6,3.6);N.pdx=clamp(dx,0.002,1);up()}};
 pn.append(ro);
 const NOTES={
  rings:[['The picture',[`Slice the disc into rings of thickness <span class="m">dr</span>. Unroll one ring: it is almost a rectangle of width <span class="m">2πr</span> and height <span class="m">dr</span>.`,`Stand all those rectangles side by side on the <span class="m">r</span>-axis. Their tops trace the line <span class="m">y = 2πr</span>, and their combined area approaches the triangle under it: ½ · R · 2πR = <span class="m">πR²</span>.`,`The approximation is wrong for every finite <span class="m">dr</span>, and it gets less wrong as <span class="m">dr</span> shrinks. That limit of sums is the integral <span class="m">∫₀ᴿ 2πr dr</span>.`]],
@@ -495,7 +525,7 @@ const MODES=[['rings','Circle rings'],['square','x²'],['cube','x³'],['puddle',
 const ms=segment($('#n-mode'),MODES,N.mode,m=>{setMode(m)});
 function setMode(m){N.mode=m;ms.select(m);Object.entries(groups).forEach(([k,e])=>e.hidden=k!==m);
   $('#n-notes').innerHTML=NOTES[m].map(([t,l])=>`<div class="note"><h4>${t}</h4><ul>${l.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('');
-  $('#n-hint').textContent=m==='sine'?'drag the point around the circle':'';p.cv.style.cursor=m==='sine'?'grab':'default';up()}
+  $('#n-plane').hidden=m!=='product';$('#n-hint').textContent=m==='sine'?'drag the point around the circle':m==='product'?'scroll down: the value plane explains why these can be sides':'';p.cv.style.cursor=m==='sine'?'grab':'default';up()}
 SETMODE.nudge=m=>{if(m)setMode(m);else up()};
 let BOX=null;
 function drawRings(c){const wide=p.w>=620;const r1=wide?{x:0,y:0,w:p.w*.46,h:p.h}:{x:0,y:0,w:p.w,h:p.h*.5},r2=wide?{x:p.w*.46,y:0,w:p.w*.54,h:p.h}:{x:0,y:p.h*.5,w:p.w,h:p.h*.5};
@@ -557,14 +587,14 @@ function drawSine(c){const th=N.th,d=N.dth;const B=fitBox(p,-1.45,1.45,-1.35,1.3
   dot(c,B.X(Px),B.Y(Py),7,K.ink,K.blue);
   const ds=Qy-Py,dc=Qx-Px;return[['θ',fmt(th,3)],['dθ',fmt(d,4),'y'],['d(sin θ) / dθ',fmt(ds/d,4),'g',1],['cos θ',fmt(Math.cos(th),4),'t'],['d(cos θ) / dθ',fmt(dc/d,4),'r',1],['−sin θ',fmt(-Math.sin(th),4),'t']]}
 function drawProduct(c){const x=N.px,d=N.pdx,s=Math.sin(x),q=x*x,s2=Math.sin(x+d),q2=(x+d)**2,ds=s2-s,dq=q2-q;
-  const ym=Math.max(2.5,q2*1.3);const B=fitBox(p,-0.32,1.5,-ym*.1,ym,{equal:false,pad:30});
+  const ym=Math.max(2.5,Math.max(q,q2)*1.3);const xl=Math.min(-0.32,Math.min(s,s2)-0.3);const B=fitBox(p,xl,1.5,-ym*.1,ym,{equal:false,pad:30});
   R(c,B.X(0),B.Y(0),B.X(s),B.Y(q),rgba(K.blue,.35),K.blue,2);
   R(c,B.X(s),B.Y(0),B.X(s2),B.Y(q),ds>=0?rgba(K.green,.55):rgba(K.red,.55),ds>=0?K.green:K.red,1.4);
-  R(c,B.X(0),B.Y(q),B.X(Math.min(s,s2)),B.Y(q2),rgba(K.teal,.55),K.teal,1.4);
+  R(c,B.X(0),B.Y(q),B.X(s>=0?Math.min(s,s2):Math.max(s,s2)),B.Y(q2),rgba(K.teal,.55),K.teal,1.4);
   if(ds>0)R(c,B.X(s),B.Y(q),B.X(s2),B.Y(q2),rgba(K.yellow,.8),null);
-  T(c,'sin x',B.X(s/2),B.Y(0)+16,{size:17});T(c,'x²',B.X(0)-14,B.Y(q/2),{size:17,align:'right'});
+  T(c,'sin x',B.X(s/2),B.Y(0)+16,{size:17});T(c,'x²',B.X(0)+(s>=0?-14:14),B.Y(q/2),{size:17,align:s>=0?'right':'left'});
   T(c,'f = sin(x)·x²',B.X(s/2),B.Y(q/2),{size:17});
-  T(c,'x² · d(sin x)',B.X(Math.max(s,s2))+8,B.Y(q*.5),{col:ds>=0?K.green:K.red,size:14,align:'left'});
+  T(c,'x² · d(sin x)',s>=0?B.X(Math.max(s,s2))+8:B.X(Math.min(s,s2))-8,B.Y(q*.5),{col:ds>=0?K.green:K.red,size:14,align:s>=0?'left':'right'});
   T(c,'sin x · d(x²)',B.X(s/2),B.Y(q2)-14,{col:K.teal,size:14});
   const df=s2*q2-s*q;return[['x',fmt(x,3)],['dx',fmt(d,4),'y'],['df exact',fmt(df,5),'b',1],['right strip  x²·d(sin x)',fmt(q*ds,5),ds>=0?'g':'r'],['top strip  sin x·d(x²)',fmt(s*dq,5),'t'],['corner',fmt(ds*dq,5),'y'],['df / dx',fmt(df/d,4),'b',1],['x²·cos x + sin x·2x',fmt(q*Math.cos(x)+s*2*x,4),'g']]}
 p.draw=c=>{const r={rings:drawRings,square:drawSquare,cube:drawCube,puddle:drawPuddle,sine:drawSine,product:drawProduct}[N.mode](c);readout(ro,r)};
@@ -846,6 +876,124 @@ const CARDS=[
 ];
 $('#sheet').innerHTML=CARDS.map(([tag,f,p,go,lab])=>`<article class="card"><div class="tag">${tag}</div><div class="f">${f}</div><p>${p}</p><a href="#${go.split(':')[0]}" data-go="${go}">Open in ${lab} →</a></article>`).join('');
 $('#sheet').addEventListener('click',e=>{const a=e.target.closest('a[data-go]');if(!a)return;e.preventDefault();const[v,m]=a.dataset.go.split(':');pendingMode=m;if(location.hash==='#'+v)route();else location.hash=v});
+})();
+
+/* ================= VALUE PLANE (product rule, second view) ================= */
+(()=>{
+const PAIRS={
+ sinsq:{l:'sin x · x²',ul:'u = sin x',vl:'v = x²',u:Math.sin,v:x=>x*x,du:Math.cos,dv:x=>2*x,r:[-3.6,3.6],x:1.2,dx:0.25,view:[-1.45,1.45,-1.4,13.6],band:1,eq:false,xn:'x'},
+ square:{l:'x · x',ul:'u = x',vl:'v = x',u:x=>x,v:x=>x,du:()=>1,dv:()=>1,r:[-3,3],x:1.6,dx:0.3,view:[-3.3,3.3,-3.3,3.3],band:1,eq:true,xn:'x'},
+ puddle:{l:'x · (1/x)',ul:'u = x',vl:'v = 1/x',u:x=>x,v:x=>1/x,du:()=>1,dv:x=>-1/(x*x),r:[0.25,4],x:1.4,dx:0.3,view:[-0.4,4.3,-0.4,4.3],band:0.5,eq:true,xn:'x'},
+ circle:{l:'cos x · sin x',ul:'u = cos x',vl:'v = sin x',u:Math.cos,v:Math.sin,du:x=>-Math.sin(x),dv:Math.cos,r:[0,2*PI],x:0.5,dx:0.25,view:[-1.35,1.35,-1.35,1.35],band:0.1,eq:true,xn:'x'},
+ revenue:{l:'price × sales',ul:'u = price p (£)',vl:'v = units sold q (k)',u:t=>5-0.5*t,v:t=>1+0.6*t,du:()=>-0.5,dv:()=>0.6,r:[0,8],x:1.5,dx:0.6,view:[-0.3,5.6,-0.3,6.4],band:2,eq:false,xn:'t'}
+};
+const Q={k:'sinsq',x:1.2,dx:0.25};
+const p2=new Plot($('#cv-plane'));const pn=$('#pn-plane');
+const ctl=h('div',{class:'group'});pn.append(ctl);
+const ro=h('dl',{class:'read'});pn.append(ro);
+const mc=h('canvas',{class:'mini','aria-label':'Strips and corner divided by the nudge, on log scales'});
+pn.append(h('div',{class:'group'},h('h3',{},'Why the corner dies'),mc));
+const p3=new Plot(mc);
+let sX=null,sDX=null,B=null,bg=null,bgKey='';
+p2.onResize=()=>{bg=null};
+function buildControls(){const P=PAIRS[Q.k];ctl.innerHTML='';ctl.append(h('h3',{},'Move along the route'));
+  sX=slider(ctl,{id:'pl-x',label:P.xn==='t'?'t (weeks)':'x',min:P.r[0],max:P.r[1],value:Q.x,f:v=>fmt(v,3)},v=>{Q.x=v;sync();up()});
+  sDX=slider(ctl,{id:'pl-dx',label:'nudge d'+P.xn,min:0.002,max:1,value:Q.dx,log:true,f:v=>fmt(v,4)},v=>{Q.dx=v;sync();up()});
+  ctl.append(h('div',{class:'row-btns'},
+    h('button',{class:'btn primary',type:'button',onclick:()=>{const s=Q.dx;tween(2400,k=>sDX.set(Math.exp(lerp(Math.log(Math.max(s,0.5)),Math.log(0.002),ease(k)))))}},'Shrink d'+P.xn+' → 0'),
+    h('button',{class:'btn',type:'button',onclick:()=>sDX.set(P.dx)},'Reset nudge')))}
+function sync(){if(Q.k==='sinsq'&&window.NUDGE_BOX)NUDGE_BOX.set(Q.x,Q.dx)}
+window.PLANE={fromBox(x,dx){if(Q.k!=='sinsq')return;Q.x=x;Q.dx=dx;if(sX){sX.set(x,true);sDX.set(dx,true)}up()}};
+function vals(){const P=PAIRS[Q.k],x=Q.x,d=Q.dx;const u0=P.u(x),v0=P.v(x),u1=P.u(x+d),v1=P.v(x+d),du=u1-u0,dv=v1-v0;
+  return{P,x,d,u0,v0,u1,v1,du,dv,a1:v0*du,a2:u0*dv,a3:du*dv,P0:u0*v0,P1:u1*v1,up:P.du(x),vp:P.dv(x)}}
+function buildBg(P){const key=Q.k+'|'+p2.w+'x'+p2.h;if(bg&&bgKey===key)return;bgKey=key;const st=2,W=Math.ceil(p2.w/st),H=Math.ceil(p2.h/st);
+  const oc=document.createElement('canvas');oc.width=W;oc.height=H;const ox=oc.getContext('2d');const im=ox.createImageData(W,H);
+  const pos=hex(K.teal),neg=hex(K.purple),base=hex(K.stage);
+  for(let j=0;j<H;j++)for(let i=0;i<W;i++){const u=B.ix(i*st+st/2),v=B.iy(j*st+st/2);const pr=u*v,t=pr/P.band,kk=Math.round(t);
+    const gpx=Math.hypot(v/B.sx,u/B.sy)||1e-9;const dist=Math.abs(pr-kk*P.band)/gpx;const tint=pr>=0?pos:neg;
+    let lev=.05+.12*Math.min(1,Math.abs(t)/8);if(kk!==0&&dist<1.1)lev=.4;
+    const k4=(j*W+i)*4;for(let q=0;q<3;q++)im.data[k4+q]=Math.round(lerp(base[q],tint[q],lev));im.data[k4+3]=255}
+  ox.putImageData(im,0,0);bg=oc}
+function ticks(c,vw){const su=niceStep((vw[1]-vw[0])/6),sv=niceStep((vw[3]-vw[2])/6);c.font=FMONO(10.5);
+  c.textAlign='center';c.textBaseline='top';for(let i=Math.ceil(vw[0]/su);i<=Math.floor(vw[1]/su);i++){if(!i)continue;const X=B.X(i*su);L(c,X,B.Y(0)-3,X,B.Y(0)+3,K.axis,1);c.fillStyle=K.faint;c.fillText(String(+(i*su).toFixed(3)),X,B.Y(0)+6)}
+  c.textAlign='right';c.textBaseline='middle';for(let i=Math.ceil(vw[2]/sv);i<=Math.floor(vw[3]/sv);i++){if(!i)continue;const Y=B.Y(i*sv);L(c,B.X(0)-3,Y,B.X(0)+3,Y,K.axis,1);c.fillStyle=K.faint;c.fillText(String(+(i*sv).toFixed(3)),B.X(0)-6,Y)}}
+p2.draw=c=>{const V=vals(),P=V.P,vw=P.view;B=fitBox(p2,vw[0],vw[1],vw[2],vw[3],{equal:P.eq,pad:30});buildBg(P);c.imageSmoothingEnabled=true;c.drawImage(bg,0,0,p2.w,p2.h);
+  L(c,0,B.Y(0),p2.w,B.Y(0),K.axis,1.3);L(c,B.X(0),0,B.X(0),p2.h,K.axis,1.3);ticks(c,vw);
+  T(c,P.ul,p2.w-12,B.Y(0)-14,{align:'right',col:K.gold,size:15});T(c,P.vl,B.X(0)+10,46,{align:'left',col:K.teal,size:15});
+  // route
+  const N=500;c.beginPath();for(let i=0;i<=N;i++){const x=P.r[0]+(P.r[1]-P.r[0])*i/N;const X=B.X(P.u(x)),Y=B.Y(P.v(x));i?c.lineTo(X,Y):c.moveTo(X,Y)}c.strokeStyle=rgba(K.ink,.5);c.lineWidth=2;c.stroke();
+  [0.15,0.4,0.65,0.9].forEach(f=>{const x=P.r[0]+(P.r[1]-P.r[0])*f,e=(P.r[1]-P.r[0])*0.004;const a=[B.X(P.u(x)),B.Y(P.v(x))],b=[B.X(P.u(x+e)),B.Y(P.v(x+e))];const g=Math.atan2(b[1]-a[1],b[0]-a[0]),s=8;
+    poly(c,[[a[0]+s*Math.cos(g),a[1]+s*Math.sin(g)],[a[0]+s*Math.cos(g+2.5),a[1]+s*Math.sin(g+2.5)],[a[0]+s*Math.cos(g-2.5),a[1]+s*Math.sin(g-2.5)]],rgba(K.ink,.6))});
+  // level set through the point
+  if(Math.abs(V.P0)>1e-9){c.save();c.setLineDash([6,5]);c.strokeStyle=rgba(K.blue,.9);c.lineWidth=1.6;c.beginPath();let pen=false,ls=0;
+    for(let px=0;px<=p2.w;px+=2){const u=B.ix(px);const sg=Math.sign(u);if(Math.abs(u)<1e-6||sg!==ls)pen=false;ls=sg;const Y=B.Y(V.P0/u);if(Y<-80||Y>p2.h+80){pen=false;continue}pen?c.lineTo(px,Y):c.moveTo(px,Y);pen=true}
+    c.stroke();c.restore();
+    const vt=(V.P0>0)===(V.u0>0)?vw[3]-(vw[3]-vw[2])*.1:vw[2]+(vw[3]-vw[2])*.1,ut=V.P0/vt;
+    if(ut>vw[0]&&ut<vw[1])T(c,'same product: '+fmt(V.P0,2),B.X(ut)+(V.u0>0?8:-8),B.Y(vt),{col:K.blue,align:V.u0>0?'left':'right',font:FMONO(11.5)})}
+  // the rectangle and its growth
+  const X0=B.X(0),Y0=B.Y(0),Xu=B.X(V.u0),Yv=B.Y(V.v0),Xu1=B.X(V.u1),Yv1=B.Y(V.v1);
+  const pc=V.P0>=0?K.blue:K.red;R(c,X0,Y0,Xu,Yv,rgba(pc,.28),pc,2);
+  const c1=V.a1>=0?K.green:K.red,c2=V.a2>=0?K.teal:K.red;
+  R(c,Xu,Y0,Xu1,Yv,rgba(c1,.6),c1,1.2);R(c,X0,Yv,Xu,Yv1,rgba(c2,.6),c2,1.2);R(c,Xu,Yv,Xu1,Yv1,rgba(K.yellow,.85),K.yellow,1);
+  if(Math.abs(Xu-X0)>70&&Math.abs(Yv-Y0)>34)T(c,'P = u · v',(X0+Xu)/2,(Y0+Yv)/2,{size:17});
+  const ox=V.u0>=0?1:-1,oy=V.v0>=0?-1:1;
+  T(c,'v·du',(ox>0?Math.max(Xu,Xu1):Math.min(Xu,Xu1))+ox*8,(Y0+Yv)/2,{col:c1,size:15,align:ox>0?'left':'right'});
+  T(c,'u·dv',(X0+Xu)/2,(oy<0?Math.min(Yv,Yv1):Math.max(Yv,Yv1))+oy*12,{col:c2,size:15});
+  T(c,'du·dv',(ox>0?Math.max(Xu,Xu1):Math.min(Xu,Xu1))+ox*6,(oy<0?Math.min(Yv,Yv1):Math.max(Yv,Yv1))+oy*10,{col:K.yellow,size:13,align:ox>0?'left':'right'});
+  // velocity (prediction) vs actual step
+  L(c,Xu,Yv,B.X(V.u0+V.up*V.d),B.Y(V.v0+V.vp*V.d),rgba(K.ink,.85),1.4,[4,3]);L(c,Xu,Yv,Xu1,Yv1,K.yellow,2.4);
+  dot(c,Xu1,Yv1,4.5,K.yellow);dot(c,Xu,Yv,7,K.ink,K.blue);
+  T(c,'(u, v)',Xu-ox*10,Yv+oy*14,{size:15,align:ox>0?'right':'left'});
+  T(c,'route: '+P.l,p2.w-14,20,{align:'right',col:K.blue,size:16});
+  const xn=P.xn;readout(ro,[['u',fmt(V.u0,4),'o'],['v',fmt(V.v0,4),'t'],['P = u·v',fmt(V.P0,4),'b'],['du',fmt(V.du,5),'o',1],['dv',fmt(V.dv,5),'t'],
+    ['side strip  v·du',fmt(V.a1,5),V.a1>=0?'g':'r',1],['top strip  u·dv',fmt(V.a2,5),V.a2>=0?'t':'r'],['corner  du·dv',fmt(V.a3,6),'y'],
+    ['dP exact',fmt(V.P1-V.P0,5),'b',1],[`dP / d${xn}`,fmt((V.P1-V.P0)/V.d,4),'b'],["u′·v + u·v′",fmt(V.up*V.v0+V.u0*V.vp,4),'g'],[`corner ÷ d${xn}`,fmt(V.a3/V.d,6),'y',1]]);
+  pipe(V)};
+const SUP=e=>String(e).split('').map(ch=>ch==='-'?'⁻':'⁰¹²³⁴⁵⁶⁷⁸⁹'['0123456789'.indexOf(ch)]).join('');
+p3.draw=c=>{const P=PAIRS[Q.k],x=Q.x,W=p3.w,Hh=p3.h,ml=40,mr=10,mt=10,mb=22,lx0=-3,lx1=0;const S=[],C=[];
+  const u0=P.u(x),v0=P.v(x);for(let i=0;i<=80;i++){const d=Math.pow(10,lerp(lx0,lx1,i/80)),du=P.u(x+d)-u0,dv=P.v(x+d)-v0;S.push([d,Math.abs(v0*du+u0*dv)/d]);C.push([d,Math.abs(du*dv)/d])}
+  const ys=[...S,...C].map(q=>q[1]).filter(v=>v>1e-12&&isFinite(v));if(!ys.length)return;
+  let y0=Math.log10(Math.max(1e-8,Math.min(...ys))),y1=Math.log10(Math.max(...ys));if(y1-y0<1){y1+=.5;y0-=.5}y1+=.3;y0-=.1;
+  const X=d=>ml+(Math.log10(d)-lx0)/(lx1-lx0)*(W-ml-mr),Y=v=>mt+(y1-Math.log10(v))/(y1-y0)*(Hh-mt-mb);
+  c.font=FMONO(9.5);c.textAlign='center';c.textBaseline='top';
+  for(let e=-3;e<=0;e++){const px=X(Math.pow(10,e));L(c,px,mt,px,Hh-mb,K.grid,1);c.fillStyle=K.faint;c.fillText(e===0?'1':'10'+SUP(e),px,Hh-mb+5)}
+  c.textAlign='right';c.textBaseline='middle';const stp=Math.max(1,Math.ceil((y1-y0)/4));
+  for(let e=Math.ceil(y0);e<=Math.floor(y1);e+=stp){const py=Y(Math.pow(10,e));L(c,ml,py,W-mr,py,K.grid,1);c.fillStyle=K.faint;c.fillText(e===0?'1':'10'+SUP(e),ml-5,py)}
+  const line=(arr,col)=>{c.beginPath();let pen=false;arr.forEach(([d,v])=>{if(!(v>1e-12)||!isFinite(v)){pen=false;return}const px=X(d),py=Y(v);pen?c.lineTo(px,py):c.moveTo(px,py);pen=true});c.strokeStyle=col;c.lineWidth=2;c.stroke()};
+  line(S,K.green);line(C,K.yellow);
+  const xd=X(clamp(Q.dx,0.001,1));L(c,xd,mt,xd,Hh-mb,rgba(K.ink,.6),1,[3,3]);
+  const sL=S[8][1],cR=C[C.length-6][1];
+  if(sL>1e-12)T(c,'strips ÷ d'+P.xn,X(S[8][0])+2,Y(sL)-9,{align:'left',font:FMONO(10.5),col:K.green});
+  if(cR>1e-12)T(c,'corner ÷ d'+P.xn,X(C[C.length-6][0]),Y(cR)+11,{align:'right',font:FMONO(10.5),col:K.yellow});
+  T(c,'d'+P.xn+' (log) →',W-mr,Hh-mb-8,{align:'right',font:FMONO(9.5),col:K.dim})};
+const pipeEl=$('#pl-pipe');
+function pipe(V){const xn=V.P.xn;pipeEl.innerHTML=`<div class="st"><div class="k">input</div><div class="big m">${xn} = ${fmt(V.x,3)}</div><div class="v">nudge d${xn} = ${fmt(V.d,4)}</div></div>
+<div class="arr"><span>step 1 · the route</span><b>→</b><small>${V.P.ul}, ${V.P.vl}</small></div>
+<div class="st"><div class="k">a point in the value plane</div><div class="big m">(u, v) = (${fmt(V.u0,3)}, ${fmt(V.v0,3)})</div><div class="v"><span class="co">du = ${fmt(V.du,4)}</span> · <span class="ct">dv = ${fmt(V.dv,4)}</span></div></div>
+<div class="arr"><span>step 2 · the product</span><b>→</b><small>area of the box</small></div>
+<div class="st"><div class="k">output</div><div class="big m">P = u·v = ${fmt(V.P0,4)}</div><div class="v">dP = <span class="${V.a1>=0?'cg':'cr'}">${fmt(V.a1,4)}</span> + <span class="${V.a2>=0?'ct':'cr'}">${fmt(V.a2,4)}</span> + <span class="cy">${fmt(V.a3,5)}</span></div></div>`}
+$('#pl-notes').innerHTML=`<div class="note"><h4>What that explanation is saying, in plain words</h4><ul>
+<li>A rectangle is just the way we draw multiplication. Its sides don't have to be lengths. Any two numbers can be the sides, so <span class="m">sin x</span> and <span class="m">x²</span> can be too.</li>
+<li>Picture a map. Going east–west changes one number, <span class="m">u</span>. Going north–south changes another, <span class="m">v</span>. Every spot on the map owns a box stretching back to the origin, and the box's area is <span class="m">u·v</span>. That map is the <b>value plane</b>. The faint curves are contour lines joining spots with the same product (they're hyperbolas).</li>
+<li>Your two functions are a <b>route</b> across this map. As <span class="m">x</span> moves, the point <span class="m">(sin x, x²)</span> travels, and the box attached to it reshapes.</li>
+<li>So there are two steps. Step 1: <span class="m">x</span> moves the point along the route, by <span class="m">du ≈ u′·dx</span> and <span class="m">dv ≈ v′·dx</span>. Step 2: the point's position sets the area, which grows by <span class="m">v·du + u·dv</span>. Chain the two and you get <span class="m">d(uv)/dx = v·u′ + u·v′</span>.</li>
+<li>Both sides being driven by the same <span class="m">x</span> doesn't break anything. The product rule only looks at the tiny moves <span class="m">du</span> and <span class="m">dv</span>, and each one feeds its own strip.</li>
+<li>The corner is a change times a change. Halve the nudge and the strips halve, but the corner quarters. After dividing by <span class="m">dx</span>, the strips settle to a fixed number and the corner still drains to zero. The log chart in the panel shows this: one line goes flat, the other dives.</li>
+<li>Walking <em>along</em> a contour keeps the product fixed. Walking <em>across</em> contours changes it. <span class="m">dP/dx</span> measures how fast your route crosses contour lines.</li>
+<li>If a side goes negative the box flips across an axis and its area counts as negative (purple region). It's the same convention as area below the axis in an integral.</li>
+<li>The "area" usually has no physical meaning: <span class="m">sin x</span> has no units and <span class="m">x²</span> might be m², so the box is just bookkeeping. With price × sales it does mean something, because the box is revenue.</li></ul></div>
+<div class="note"><h4>Try this</h4><ul>
+<li><b>x · x</b>: the route is the diagonal, so every box is a square. That is the x² picture from the x² tab.</li>
+<li><b>x · (1/x)</b>: the route runs exactly along the contour <span class="m">P = 1</span>. The two strips are equal and opposite, so the product never changes. That's the puddle from the 1/x tab, and it's why <span class="m">d(1/x) = −dx/x²</span>.</li>
+<li><b>price × sales</b>: each week the price drops 50p and sales rise by 600 units. The red strip <span class="m">q·dp</span> is money lost on customers you already had. The teal strip <span class="m">p·dq</span> is money from new customers. Drag <span class="m">t</span>: revenue peaks at about 4.17 weeks, where the strips balance and the route just touches a contour line.</li>
+<li><b>sin x · x²</b>: drag past <span class="m">x = π</span>. <span class="m">sin x</span> goes negative, the box crosses to the left and its area turns red. The box above moves in step.</li>
+<li><b>cos x · sin x</b>: the route is the unit circle. The product peaks at <span class="m">x = π/4</span>, where the circle touches the <span class="m">P = ½</span> contour.</li>
+<li>Press <b>Shrink → 0</b> and watch the dashed marker slide left on the log chart.</li></ul></div>`;
+const ps=segment($('#pl-pair'),Object.entries(PAIRS).map(([k,o])=>[k,o.l]),Q.k,k=>{Q.k=k;Q.x=PAIRS[k].x;Q.dx=PAIRS[k].dx;bg=null;buildControls();sync();up()});
+function nearest(px,py){const P=PAIRS[Q.k];let best={d:1e9,x:Q.x};for(let i=0;i<=900;i++){const x=P.r[0]+(P.r[1]-P.r[0])*i/900;const d=Math.hypot(B.X(P.u(x))-px,B.Y(P.v(x))-py);if(d<best.d)best={d,x}}return best}
+pointer(p2.cv,{down(x,y){if(!B)return null;return nearest(x,y).d<32?'pt':null},move(t,x,y){sX.set(nearest(x,y).x)}});
+function up(){p2.render();p3.render()}
+buildControls();up();
 })();
 
 /* ================= routing ================= */
